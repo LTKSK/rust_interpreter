@@ -26,6 +26,13 @@ enum TokenKind {
     // keywards
     FUNCTION,
     LET,
+    TRUE,
+    FALSE,
+    IF,
+    ELSE,
+    RETURN,
+    EQ,
+    NEQ,
 }
 
 #[derive(Clone, Debug)]
@@ -96,10 +103,17 @@ impl<'a> Lexer<'a> {
         ident
     }
 
-    fn token_kind_from(&self, literal: &str) -> TokenKind {
-        match literal {
+    //fn peek_char(&self) -> char { }
+
+    fn token_kind_from(&self, ident: &str) -> TokenKind {
+        match ident {
             "let" => TokenKind::LET,
             "fn" => TokenKind::FUNCTION,
+            "true" => TokenKind::TRUE,
+            "false" => TokenKind::FALSE,
+            "if" => TokenKind::IF,
+            "else" => TokenKind::ELSE,
+            "return" => TokenKind::RETURN,
             ident => TokenKind::IDENT(ident.to_string()),
         }
     }
@@ -107,9 +121,33 @@ impl<'a> Lexer<'a> {
     pub fn next_token(&mut self) -> Token {
         self.skip_whitespace();
         let token = match self.current {
-            '=' => Token {
-                kind: TokenKind::ASSIGN,
-                literal: "=".to_string(),
+            '=' => match self.next {
+                // ==の分岐
+                '=' => {
+                    // 先読みしているので一つすすめるのを忘れずに
+                    self.read_char();
+                    Token {
+                        kind: TokenKind::EQ,
+                        literal: "==".to_string(),
+                    }
+                }
+                _ => Token {
+                    kind: TokenKind::ASSIGN,
+                    literal: "=".to_string(),
+                },
+            },
+            '!' => match self.next {
+                '=' => {
+                    self.read_char();
+                    Token {
+                        kind: TokenKind::NEQ,
+                        literal: "!=".to_string(),
+                    }
+                }
+                _ => Token {
+                    kind: TokenKind::BANG,
+                    literal: "!".to_string(),
+                },
             },
             '+' => Token {
                 kind: TokenKind::PLUS,
@@ -126,10 +164,6 @@ impl<'a> Lexer<'a> {
             '/' => Token {
                 kind: TokenKind::SLASH,
                 literal: "/".to_string(),
-            },
-            '!' => Token {
-                kind: TokenKind::BANG,
-                literal: "!".to_string(),
             },
             '<' => Token {
                 kind: TokenKind::LT,
@@ -273,7 +307,15 @@ mod tests {
             let add = fn(x,y) {
                 x + y;
             };
-            let result = add(five, ten);"#;
+            let result = add(five, ten);
+            if 
+            else 
+            return 
+            true 
+            false
+            ==
+            !=
+            "#;
         let mut lexer = Lexer::new(input);
         let tests = vec![
             Token {
@@ -420,6 +462,34 @@ mod tests {
             Token {
                 kind: TokenKind::SEMICOLON,
                 literal: ";".to_string(),
+            },
+            Token {
+                kind: TokenKind::IF,
+                literal: "if".to_string(),
+            },
+            Token {
+                kind: TokenKind::ELSE,
+                literal: "else".to_string(),
+            },
+            Token {
+                kind: TokenKind::RETURN,
+                literal: "return".to_string(),
+            },
+            Token {
+                kind: TokenKind::TRUE,
+                literal: "true".to_string(),
+            },
+            Token {
+                kind: TokenKind::FALSE,
+                literal: "false".to_string(),
+            },
+            Token {
+                kind: TokenKind::EQ,
+                literal: "==".to_string(),
+            },
+            Token {
+                kind: TokenKind::NEQ,
+                literal: "!=".to_string(),
             },
             Token {
                 kind: TokenKind::EOF,
