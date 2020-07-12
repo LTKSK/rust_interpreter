@@ -1,7 +1,8 @@
+use std::fmt;
 use std::str::Chars;
 
 #[derive(Clone, Debug, PartialEq)]
-enum TokenKind {
+pub enum TokenKind {
     ILLEGAL,
     EOF,
     // identifiers
@@ -35,14 +36,55 @@ enum TokenKind {
     NEQ,
 }
 
+impl fmt::Display for TokenKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let value = match self {
+            TokenKind::ILLEGAL => "ILLEGAL",
+            TokenKind::EOF => "EOF",
+            TokenKind::IDENT(_) => "IDENT",
+            TokenKind::INT(_) => "INT",
+            TokenKind::ASSIGN => "ASSIGN",
+            TokenKind::PLUS => "PLUS",
+            TokenKind::MINUS => "MINUS",
+            TokenKind::ASTERISK => "ASTERISK",
+            TokenKind::SLASH => "SLASH",
+            TokenKind::LT => "LT",
+            TokenKind::GT => "GT",
+            TokenKind::BANG => "BANG",
+            TokenKind::COMMA => "CAMMA",
+            TokenKind::SEMICOLON => "SEMICOLON",
+            TokenKind::LPAREN => "LPAREN",
+            TokenKind::RPAREN => "RPAREN",
+            TokenKind::LBRACE => "LBRACE",
+            TokenKind::RBRACE => "RBRACE",
+            TokenKind::FUNCTION => "FUNCTION",
+            TokenKind::LET => "LET",
+            TokenKind::TRUE => "TRUE",
+            TokenKind::FALSE => "FALSE",
+            TokenKind::IF => "IF",
+            TokenKind::ELSE => "ELSE",
+            TokenKind::RETURN => "RETURN",
+            TokenKind::EQ => "EQ",
+            TokenKind::NEQ => "NEQ",
+        };
+        write!(f, "{}", value)
+    }
+}
+
 #[derive(Clone, Debug)]
-struct Token {
+pub struct Token {
     pub kind: TokenKind,
     pub literal: String,
 }
 
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}: {}", self.kind, self.literal)
+    }
+}
+
 #[derive(Clone, Debug)]
-struct Lexer<'a> {
+pub struct Lexer<'a> {
     input: Chars<'a>,
     current: char,
     next: char,
