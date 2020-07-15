@@ -17,5 +17,8 @@ pub struct Program {
 
 #[derive(Clone, Debug)]
 pub enum Statement {
-    LetStatement { name: Identifier, value: Expression },
+    // nameが変数名で、valueが=の右辺
+    Let { name: Identifier, value: Expression },
+    // tokenは自明なので保持しない
+    Return { expression: Expression },
 }

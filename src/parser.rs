@@ -5,7 +5,9 @@ use std::error::Error;
 use std::fmt;
 
 #[derive(Debug)]
-struct ParseError {}
+struct ParseError {
+    msg: String,
+}
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str("ParseError!")
@@ -22,6 +24,7 @@ struct Parser<'a> {
     lexer: &'a mut Lexer<'a>,
     current_token: Token,
     peek_token: Token,
+    errors: Vec<ParseError>,
 }
 
 impl<'a> Parser<'a> {
@@ -36,6 +39,7 @@ impl<'a> Parser<'a> {
                 kind: TokenKind::ILLEGAL,
                 literal: "".to_string(),
             },
+            errors: vec![],
         };
         p.next_token();
         p.next_token();
@@ -63,44 +67,65 @@ impl<'a> Parser<'a> {
         return false;
     }
 
-    pub fn parse_let_statement(&mut self) -> Option<ast::Statement> {
+    pub fn parse_let_statement(&mut self) -> Result<ast::Statement, ParseError> {
         if !self.expect_peek(TokenKind::IDENT) {
-            panic!("identのpeek失敗");
-            //return None;
+            return Err(ParseError {
+                msg: format!(
+                    "expect `{}` but got `{}`",
+                    TokenKind::IDENT,
+                    self.peek_token.kind,
+                ),
+            });
         }
         let identifier = ast::Identifier {
             token: self.current_token.clone(),
         };
         if !self.expect_peek(TokenKind::ASSIGN) {
-            panic!("=のpeek失敗");
-            //return None;
+            return Err(ParseError {
+                msg: format!(
+                    "expect `{}` but got `{}`",
+                    TokenKind::IDENT,
+                    self.peek_token.kind,
+                ),
+            });
         }
         // TODO: implelemnt expression
         while !self.current_token_is(TokenKind::SEMICOLON) {
             self.next_token();
         }
-        let stmt = ast::Statement::LetStatement {
+        let stmt = ast::Statement::Let {
             name: identifier,
-            // TODO 上でexpressionのparseが実装されたらNoneを置き換える
             value: ast::Expression::None,
         };
-        Some(stmt)
+        Ok(stmt)
     }
 
-    pub fn parse_statement(&mut self) -> Option<ast::Statement> {
+    pub fn parse_return_statement(&mut self) -> Result<ast::Statement, ParseError> {
+        // TODO
+        let stmt = ast::Statement::Return {
+            expression: ast::Expression::None,
+        };
+        self.next_token();
+        // TODO: ここにExpressionのparse
+        while !self.current_token_is(TokenKind::SEMICOLON) {
+            self.next_token();
+        }
+        Ok(stmt)
+    }
+
+    pub fn parse_statement(&mut self) -> Result<ast::Statement, ParseError> {
         match &self.current_token.kind {
-            TokenKind::LET => self.parse_let_statement(),
-            _ => None,
+            TokenKind::LET => Ok(self.parse_let_statement()?),
+            TokenKind::RETURN => Ok(self.parse_return_statement()?),
+            _ => unreachable!(),
         }
     }
 
     pub fn parse_program(&mut self) -> Result<ast::Program, ParseError> {
         let mut program = ast::Program { statements: vec![] };
         while self.current_token.kind != TokenKind::EOF {
-            let statement = self.parse_statement();
-            if let Some(s) = statement {
-                program.statements.push(s);
-            }
+            let statement = self.parse_statement()?;
+            program.statements.push(statement);
             self.next_token();
         }
         Ok(program)
@@ -121,9 +146,18 @@ mod test {
         let mut parser = Parser::new(&mut lexer);
         let program = parser.parse_program().unwrap();
         assert_eq!(program.statements.len(), 3);
+    }
 
-        //for s in &program.statements {
-        //    assert_eq!(s.token_literal(), "let");
-        //}
+    #[test]
+    fn test_return_statement() {
+        let input = r#"
+            return 5;
+            return 10;
+            return 993322;
+            "#;
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program().unwrap();
+        assert_eq!(program.statements.len(), 3);
     }
 }
