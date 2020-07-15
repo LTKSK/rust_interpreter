@@ -74,7 +74,7 @@ impl<'a> Lexer<'a> {
             "if" => TokenKind::IF,
             "else" => TokenKind::ELSE,
             "return" => TokenKind::RETURN,
-            ident => TokenKind::IDENT(ident.to_string()),
+            ident => TokenKind::IDENT,
         }
     }
 
@@ -171,7 +171,7 @@ impl<'a> Lexer<'a> {
                 } else if Self::is_digit(c) {
                     let ident = self.read_number();
                     return Token {
-                        kind: TokenKind::INT(ident.parse().unwrap()),
+                        kind: TokenKind::INT,
                         literal: ident,
                     };
                 } else {
@@ -283,8 +283,7 @@ mod tests {
                 literal: "let".to_string(),
             },
             Token {
-                // とりあえずダミーを詰めとく。最終的にkindだけでよくなるかも
-                kind: TokenKind::IDENT("five".to_string()),
+                kind: TokenKind::IDENT,
                 literal: "five".to_string(),
             },
             Token {
@@ -292,7 +291,7 @@ mod tests {
                 literal: "=".to_string(),
             },
             Token {
-                kind: TokenKind::INT(5),
+                kind: TokenKind::INT,
                 literal: "5".to_string(),
             },
             Token {
@@ -304,7 +303,7 @@ mod tests {
                 literal: "let".to_string(),
             },
             Token {
-                kind: TokenKind::IDENT("ten".to_string()),
+                kind: TokenKind::IDENT,
                 literal: "ten".to_string(),
             },
             Token {
@@ -312,7 +311,7 @@ mod tests {
                 literal: "=".to_string(),
             },
             Token {
-                kind: TokenKind::INT(10),
+                kind: TokenKind::INT,
                 literal: "10".to_string(),
             },
             Token {
@@ -324,7 +323,7 @@ mod tests {
                 literal: "let".to_string(),
             },
             Token {
-                kind: TokenKind::IDENT("add".to_string()),
+                kind: TokenKind::IDENT,
                 literal: "add".to_string(),
             },
             Token {
@@ -340,7 +339,7 @@ mod tests {
                 literal: "(".to_string(),
             },
             Token {
-                kind: TokenKind::IDENT("x".to_string()),
+                kind: TokenKind::IDENT,
                 literal: "x".to_string(),
             },
             Token {
@@ -348,7 +347,7 @@ mod tests {
                 literal: ",".to_string(),
             },
             Token {
-                kind: TokenKind::IDENT("y".to_string()),
+                kind: TokenKind::IDENT,
                 literal: "y".to_string(),
             },
             Token {
@@ -360,7 +359,7 @@ mod tests {
                 literal: "{".to_string(),
             },
             Token {
-                kind: TokenKind::IDENT("x".to_string()),
+                kind: TokenKind::IDENT,
                 literal: "x".to_string(),
             },
             Token {
@@ -368,7 +367,7 @@ mod tests {
                 literal: "+".to_string(),
             },
             Token {
-                kind: TokenKind::IDENT("y".to_string()),
+                kind: TokenKind::IDENT,
                 literal: "y".to_string(),
             },
             Token {
@@ -388,7 +387,7 @@ mod tests {
                 literal: "let".to_string(),
             },
             Token {
-                kind: TokenKind::IDENT("result".to_string()),
+                kind: TokenKind::IDENT,
                 literal: "result".to_string(),
             },
             Token {
@@ -396,7 +395,7 @@ mod tests {
                 literal: "=".to_string(),
             },
             Token {
-                kind: TokenKind::IDENT("add".to_string()),
+                kind: TokenKind::IDENT,
                 literal: "add".to_string(),
             },
             Token {
@@ -404,7 +403,7 @@ mod tests {
                 literal: "(".to_string(),
             },
             Token {
-                kind: TokenKind::IDENT("five".to_string()),
+                kind: TokenKind::IDENT,
                 literal: "five".to_string(),
             },
             Token {
@@ -412,7 +411,7 @@ mod tests {
                 literal: ",".to_string(),
             },
             Token {
-                kind: TokenKind::IDENT("ten".to_string()),
+                kind: TokenKind::IDENT,
                 literal: "ten".to_string(),
             },
             Token {

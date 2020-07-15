@@ -1,12 +1,12 @@
 use std::fmt;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Copy, Eq, PartialEq)]
 pub enum TokenKind {
     ILLEGAL,
     EOF,
     // identifiers
-    IDENT(String),
-    INT(i32),
+    IDENT,
+    INT,
     // operators
     ASSIGN,
     PLUS,
@@ -40,8 +40,8 @@ impl fmt::Display for TokenKind {
         let value = match self {
             TokenKind::ILLEGAL => "ILLEGAL",
             TokenKind::EOF => "EOF",
-            TokenKind::IDENT(_) => "IDENT",
-            TokenKind::INT(_) => "INT",
+            TokenKind::IDENT => "IDENT",
+            TokenKind::INT => "INT",
             TokenKind::ASSIGN => "ASSIGN",
             TokenKind::PLUS => "PLUS",
             TokenKind::MINUS => "MINUS",
@@ -70,7 +70,7 @@ impl fmt::Display for TokenKind {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Token {
     pub kind: TokenKind,
     pub literal: String,
