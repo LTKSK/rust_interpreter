@@ -1,18 +1,27 @@
 use crate::token::*;
 
 #[derive(Clone, Debug)]
-enum Statement {
+pub enum Statement {
     LetStatement(LetStatement),
 }
 
+impl Statement {
+    pub fn token_literal(&self) -> String {
+        match &self {
+            Statement::LetStatement(s) => s.token_literal(),
+            _ => unreachable!(),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
-enum Expression {
+pub enum Expression {
     Identifier(Identifier),
 }
 
 #[derive(Clone, Debug)]
 pub struct Program {
-    statements: Vec<Statement>,
+    pub statements: Vec<Statement>,
 }
 
 impl Program {
@@ -31,12 +40,11 @@ impl Program {
 #[derive(Clone, Debug)]
 struct LetStatement {
     token: Token,
-    name: String,
+    name: Identifier,
     value: Expression,
 }
 
 impl LetStatement {
-    pub fn statement_node(&self) {}
     pub fn token_literal(&self) -> String {
         self.token.literal.clone()
     }
@@ -49,7 +57,6 @@ struct Identifier {
 }
 
 impl Identifier {
-    pub fn expression_node(&self) {}
     pub fn token_literal(&self) -> String {
         self.token.literal.clone()
     }
