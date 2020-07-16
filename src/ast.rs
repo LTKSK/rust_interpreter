@@ -8,7 +8,7 @@ pub struct Identifier {
 
 #[derive(Clone, Debug)]
 pub enum Expression {
-    None, //Identifier(Identifier),
+    Identifier(String),
 }
 
 #[derive(Clone, Debug)]
@@ -21,16 +21,18 @@ pub enum Statement {
     // nameが変数名で、valueが=の右辺
     Let { name: Identifier, value: Expression },
     // tokenは自明なので保持しない
-    Return { expression: Expression },
+    Return(Expression),
+    ExpressionStatement(Expression),
 }
 
 impl fmt::Display for Statement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Let { name, value } => {
+            Self::Let { name, .. } => {
                 write!(f, "{}", format!("let {} = ident;", name.token.literal))
             }
-            Self::Return { expression } => write!(f, "b"),
+            Self::Return(e) => write!(f, "{}", format!("return ident;")),
+            Self::ExpressionStatement(e) => write!(f, "{}", format!("{:?}", e)),
         }
     }
 }

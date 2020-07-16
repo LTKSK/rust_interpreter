@@ -4,6 +4,17 @@ use crate::token::{Token, TokenKind};
 use std::error::Error;
 use std::fmt;
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd)]
+enum Precedens {
+    LOWEST,
+    EQUALS,      // ==
+    LESSGREATER, // > <
+    SUM,         //+
+    PRODUCT,     //*
+    PREFIX,      // -X or !X
+    CALL,        // myFunction(X)
+}
+
 #[derive(Debug)]
 struct ParseError {
     msg: String,
@@ -95,16 +106,14 @@ impl<'a> Parser<'a> {
         }
         let stmt = ast::Statement::Let {
             name: identifier,
-            value: ast::Expression::None,
+            value: ast::Expression::Identifier("dummy".to_string()),
         };
         Ok(stmt)
     }
 
     pub fn parse_return_statement(&mut self) -> Result<ast::Statement, ParseError> {
         // TODO
-        let stmt = ast::Statement::Return {
-            expression: ast::Expression::None,
-        };
+        let stmt = ast::Statement::Return(ast::Expression::Identifier("dummy".to_string()));
         self.next_token();
         // TODO: ここにExpressionのparse
         while !self.current_token_is(TokenKind::SEMICOLON) {
@@ -113,10 +122,35 @@ impl<'a> Parser<'a> {
         Ok(stmt)
     }
 
+    fn parse_prefix(&mut self) -> Result<ast::Expression, ParseError> {
+        match self.current_token.kind {
+            TokenKind::IDENT => Ok(ast::Expression::Identifier(
+                self.current_token.clone().literal,
+            )),
+            _ => Err(ParseError {
+                msg: "Unexpected Expression".to_string(),
+            }),
+        }
+    }
+
+    fn parse_expression(&mut self, _precedence: Precedens) -> Result<ast::Expression, ParseError> {
+        let left_exp = self.parse_prefix()?;
+        Ok(left_exp)
+    }
+
+    fn parse_expression_statement(&mut self) -> Result<ast::Statement, ParseError> {
+        let expression = self.parse_expression(Precedens::LOWEST)?;
+        while !self.current_token_is(TokenKind::SEMICOLON) {
+            self.next_token();
+        }
+        Ok(ast::Statement::ExpressionStatement(expression))
+    }
+
     pub fn parse_statement(&mut self) -> Result<ast::Statement, ParseError> {
         match &self.current_token.kind {
             TokenKind::LET => Ok(self.parse_let_statement()?),
             TokenKind::RETURN => Ok(self.parse_return_statement()?),
+            TokenKind::IDENT => Ok(self.parse_expression_statement()?),
             _ => unreachable!(),
         }
     }
@@ -164,5 +198,26 @@ mod test {
         let mut parser = Parser::new(&mut lexer);
         let program = parser.parse_program().unwrap();
         assert_eq!(program.statements.len(), 3);
+        let tests = vec!["return ident;", "return ident;", "return ident;"];
+        for (index, stmt) in program.statements.iter().enumerate() {
+            assert_eq!(format!("{}", stmt), tests[index]);
+        }
+    }
+
+    #[test]
+    fn test_identifier_expression() {
+        let input = "foobar;";
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program().unwrap();
+        assert_eq!(program.statements.len(), 1);
+        let ident = match &program.statements[0] {
+            ast::Statement::ExpressionStatement(e) => match e {
+                ast::Expression::Identifier(s) => s,
+                _ => "unreach",
+            },
+            e => panic!(format!("expect `Expression` but got {:?}", e),),
+        };
+        assert_eq!(ident, "foobar");
     }
 }
