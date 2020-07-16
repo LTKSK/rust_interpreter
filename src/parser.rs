@@ -146,6 +146,9 @@ mod test {
         let mut parser = Parser::new(&mut lexer);
         let program = parser.parse_program().unwrap();
         assert_eq!(program.statements.len(), 3);
+        for stmt in program.statements {
+            assert_eq!(format!("{:?}", stmt), "a");
+        }
     }
 
     #[test]
