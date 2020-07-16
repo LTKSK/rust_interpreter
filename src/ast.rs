@@ -27,7 +27,9 @@ pub enum Statement {
 impl fmt::Display for Statement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Let { name, value } => write!(f, "a"),
+            Self::Let { name, value } => {
+                write!(f, "{}", format!("let {} = ident;", name.token.literal))
+            }
             Self::Return { expression } => write!(f, "b"),
         }
     }

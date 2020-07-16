@@ -146,8 +146,10 @@ mod test {
         let mut parser = Parser::new(&mut lexer);
         let program = parser.parse_program().unwrap();
         assert_eq!(program.statements.len(), 3);
-        for stmt in program.statements {
-            assert_eq!(format!("{:?}", stmt), "a");
+        let tests = vec!["let x = ident;", "let y = ident;", "let foobar = ident;"];
+        for (index, stmt) in program.statements.iter().enumerate() {
+            // TODO ident となっているところはexpressionを定義したら実装
+            assert_eq!(format!("{}", stmt), tests[index]);
         }
     }
 
