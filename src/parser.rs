@@ -88,9 +88,7 @@ impl<'a> Parser<'a> {
                 ),
             });
         }
-        let identifier = ast::Identifier {
-            token: self.current_token.clone(),
-        };
+        let identifier = self.current_token.clone().literal;
         if !self.expect_peek(TokenKind::ASSIGN) {
             return Err(ParseError {
                 msg: format!(
@@ -127,6 +125,9 @@ impl<'a> Parser<'a> {
             TokenKind::IDENT => Ok(ast::Expression::Identifier(
                 self.current_token.clone().literal,
             )),
+            TokenKind::INT => Ok(ast::Expression::Integer(
+                self.current_token.clone().literal.parse::<i32>().unwrap(),
+            )),
             _ => Err(ParseError {
                 msg: "Unexpected Expression".to_string(),
             }),
@@ -150,8 +151,7 @@ impl<'a> Parser<'a> {
         match &self.current_token.kind {
             TokenKind::LET => Ok(self.parse_let_statement()?),
             TokenKind::RETURN => Ok(self.parse_return_statement()?),
-            TokenKind::IDENT => Ok(self.parse_expression_statement()?),
-            _ => unreachable!(),
+            _ => Ok(self.parse_expression_statement()?),
         }
     }
 
@@ -219,5 +219,22 @@ mod test {
             e => panic!(format!("expect `Expression` but got {:?}", e),),
         };
         assert_eq!(ident, "foobar");
+    }
+
+    #[test]
+    fn test_int_expression() {
+        let input = "5;";
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program().unwrap();
+        assert_eq!(program.statements.len(), 1);
+        let ident = match &program.statements[0] {
+            ast::Statement::ExpressionStatement(e) => match e {
+                ast::Expression::Integer(i) => i,
+                _ => &999,
+            },
+            e => panic!(format!("expect `Expression` but got {:?}", e),),
+        };
+        assert_eq!(ident, &5);
     }
 }
