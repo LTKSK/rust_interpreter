@@ -1,14 +1,23 @@
 use crate::token::*;
 use std::fmt;
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum PrefixOprator {
+    Minus,
+    Bang,
+}
+
 #[derive(Clone, Debug)]
 pub enum Expression {
     Identifier(String),
     Integer(i32),
+    Prefix {
+        operator: PrefixOprator,
+        right: Box<Expression>,
+    },
 }
 
 //impl fmt::Display for Expression
-
 #[derive(Clone, Debug)]
 pub struct Program {
     pub statements: Vec<Statement>,

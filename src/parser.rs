@@ -6,13 +6,13 @@ use std::fmt;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd)]
 enum Precedens {
-    LOWEST,
-    EQUALS,      // ==
-    LESSGREATER, // > <
-    SUM,         //+
-    PRODUCT,     //*
-    PREFIX,      // -X or !X
-    CALL,        // myFunction(X)
+    Lowest,
+    Equals,      // ==
+    Lessgreater, // > <
+    Sum,         //+
+    Product,     //*
+    Prefix,      // -X or !X
+    Call,        // myFunction(X)
 }
 
 #[derive(Debug)]
@@ -110,7 +110,6 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_return_statement(&mut self) -> Result<ast::Statement, ParseError> {
-        // TODO
         let stmt = ast::Statement::Return(ast::Expression::Identifier("dummy".to_string()));
         self.next_token();
         // TODO: ここにExpressionのparse
@@ -128,6 +127,20 @@ impl<'a> Parser<'a> {
             TokenKind::INT => Ok(ast::Expression::Integer(
                 self.current_token.clone().literal.parse::<i32>().unwrap(),
             )),
+            TokenKind::MINUS => {
+                self.next_token();
+                Ok(ast::Expression::Prefix {
+                    operator: ast::PrefixOprator::Minus,
+                    right: Box::new(self.parse_expression(Precedens::Prefix)?),
+                })
+            }
+            TokenKind::BANG => {
+                self.next_token();
+                Ok(ast::Expression::Prefix {
+                    operator: ast::PrefixOprator::Bang,
+                    right: Box::new(self.parse_expression(Precedens::Prefix)?),
+                })
+            }
             _ => Err(ParseError {
                 msg: "Unexpected Expression".to_string(),
             }),
@@ -140,7 +153,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expression_statement(&mut self) -> Result<ast::Statement, ParseError> {
-        let expression = self.parse_expression(Precedens::LOWEST)?;
+        let expression = self.parse_expression(Precedens::Lowest)?;
         while !self.current_token_is(TokenKind::SEMICOLON) {
             self.next_token();
         }
@@ -236,5 +249,33 @@ mod test {
             e => panic!(format!("expect `Expression` but got {:?}", e),),
         };
         assert_eq!(ident, &5);
+    }
+
+    #[test]
+    fn test_prefix_expression() {
+        let input = r#"
+            -5;
+            !5;
+        "#;
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program().unwrap();
+        assert_eq!(program.statements.len(), 2);
+
+        let tests = [
+            (ast::PrefixOprator::Minus, 5),
+            (ast::PrefixOprator::Bang, 5),
+        ];
+        for (index, stmt) in program.statements.iter().enumerate() {
+            let prefix = match stmt {
+                ast::Statement::ExpressionStatement(e) => match e {
+                    ast::Expression::Prefix { operator, right } => (operator, right),
+                    _ => panic!("Invalid Prefix Expression"),
+                },
+                e => panic!(format!("expect `Expression` but got {:?}", e),),
+            };
+            assert_eq!(*prefix.0, tests[index].0);
+            //assert_eq!(*prefix.1, tests[index].1);
+        }
     }
 }
