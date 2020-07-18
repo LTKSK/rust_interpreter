@@ -1,6 +1,6 @@
 use crate::ast;
 use crate::lexer::Lexer;
-use crate::token::{Token, TokenKind};
+use crate::token::Token;
 use std::error::Error;
 use std::fmt;
 
@@ -16,12 +16,12 @@ enum Precedence {
 }
 
 impl Precedence {
-    fn FromTokenKind(kind: &TokenKind) -> Self {
+    fn FromToken(kind: &Token) -> Self {
         match kind {
-            TokenKind::EQ | TokenKind::NEQ => Self::Equals,
-            TokenKind::LT | TokenKind::GT => Self::Lessgreater,
-            TokenKind::PLUS | TokenKind::MINUS => Self::Sum,
-            TokenKind::SLASH | TokenKind::ASTERISK => Self::Product,
+            Token::EQ | Token::NEQ => Self::Equals,
+            Token::LT | Token::GT => Self::Lessgreater,
+            Token::PLUS | Token::MINUS => Self::Sum,
+            Token::SLASH | Token::ASTERISK => Self::Product,
             _ => Self::Lowest,
         }
     }
@@ -54,14 +54,8 @@ impl<'a> Parser<'a> {
     pub fn new(lexer: &'a mut Lexer<'a>) -> Parser<'a> {
         let mut p = Parser {
             lexer: lexer,
-            current_token: Token {
-                kind: TokenKind::ILLEGAL,
-                literal: "".to_string(),
-            },
-            peek_token: Token {
-                kind: TokenKind::ILLEGAL,
-                literal: "".to_string(),
-            },
+            current_token: Token::ILLEGAL,
+            peek_token: Token::ILLEGAL,
             errors: vec![],
         };
         p.next_token();
@@ -74,19 +68,19 @@ impl<'a> Parser<'a> {
         self.peek_token = self.lexer.next_token();
     }
 
-    fn current_token_is(&self, kind: TokenKind) -> bool {
-        self.current_token.kind == kind
+    fn current_token_is(&self, kind: Token) -> bool {
+        self.current_token == kind
     }
 
-    fn peek_token_is(&self, kind: TokenKind) -> bool {
-        self.peek_token.kind == kind
+    fn peek_token_is(&self, kind: Token) -> bool {
+        self.peek_token == kind
     }
 
     fn peek_precedence(&self) -> Precedence {
-        Precedence::FromTokenKind(&self.peek_token.kind)
+        Precedence::FromToken(&self.peek_token)
     }
 
-    fn expect_peek(&mut self, kind: TokenKind) -> bool {
+    fn expect_peek(&mut self, kind: Token) -> bool {
         if self.peek_token_is(kind) {
             self.next_token();
             return true;
@@ -95,27 +89,22 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_let_statement(&mut self) -> Result<ast::Statement, ParseError> {
-        if !self.expect_peek(TokenKind::IDENT) {
+        self.next_token();
+        let identifier = match self.current_token.clone() {
+            Token::IDENT(ident) => ident,
+            _ => {
+                return Err(ParseError {
+                    msg: format!("expect `IDENT` but got `{}`", self.peek_token),
+                })
+            }
+        };
+        if !self.expect_peek(Token::ASSIGN) {
             return Err(ParseError {
-                msg: format!(
-                    "expect `{}` but got `{}`",
-                    TokenKind::IDENT,
-                    self.peek_token.kind,
-                ),
-            });
-        }
-        let identifier = self.current_token.clone().literal;
-        if !self.expect_peek(TokenKind::ASSIGN) {
-            return Err(ParseError {
-                msg: format!(
-                    "expect `{}` but got `{}`",
-                    TokenKind::IDENT,
-                    self.peek_token.kind,
-                ),
+                msg: format!("expect `IDENT` but got `{}`", self.peek_token,),
             });
         }
         // TODO: implelemnt expression
-        while !self.current_token_is(TokenKind::SEMICOLON) {
+        while !self.current_token_is(Token::SEMICOLON) {
             self.next_token();
         }
         let stmt = ast::Statement::Let {
@@ -129,7 +118,7 @@ impl<'a> Parser<'a> {
         let stmt = ast::Statement::Return(ast::Expression::Identifier("dummy".to_string()));
         self.next_token();
         // TODO: ここにExpressionのparse
-        while !self.current_token_is(TokenKind::SEMICOLON) {
+        while !self.current_token_is(Token::SEMICOLON) {
             self.next_token();
         }
         Ok(stmt)
@@ -137,7 +126,7 @@ impl<'a> Parser<'a> {
 
     fn parse_expression(&mut self, precedence: Precedence) -> Result<ast::Expression, ParseError> {
         let mut expression = self.parse_prefix()?;
-        while !self.peek_token_is(TokenKind::SEMICOLON) && precedence < self.peek_precedence() {
+        while !self.peek_token_is(Token::SEMICOLON) && precedence < self.peek_precedence() {
             self.next_token();
             expression = self.parse_infix(expression)?;
         }
@@ -145,19 +134,19 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_infix(&mut self, left: ast::Expression) -> Result<ast::Expression, ParseError> {
-        let operator = match &self.current_token.kind {
-            TokenKind::PLUS => ast::InfixOprator::Plus,
-            TokenKind::MINUS => ast::InfixOprator::Minus,
-            TokenKind::ASTERISK => ast::InfixOprator::Asterisk,
-            TokenKind::SLASH => ast::InfixOprator::Slash,
-            TokenKind::GT => ast::InfixOprator::Gt,
-            TokenKind::LT => ast::InfixOprator::Lt,
-            TokenKind::EQ => ast::InfixOprator::Equal,
-            TokenKind::NEQ => ast::InfixOprator::Nequal,
+        let operator = match &self.current_token {
+            Token::PLUS => ast::InfixOprator::Plus,
+            Token::MINUS => ast::InfixOprator::Minus,
+            Token::ASTERISK => ast::InfixOprator::Asterisk,
+            Token::SLASH => ast::InfixOprator::Slash,
+            Token::GT => ast::InfixOprator::Gt,
+            Token::LT => ast::InfixOprator::Lt,
+            Token::EQ => ast::InfixOprator::Equal,
+            Token::NEQ => ast::InfixOprator::Nequal,
             _ => return Ok(left),
         };
 
-        let precedence = Precedence::FromTokenKind(&self.current_token.kind);
+        let precedence = Precedence::FromToken(&self.current_token);
         self.next_token();
         let right = self.parse_expression(precedence)?;
 
@@ -169,21 +158,17 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_prefix(&mut self) -> Result<ast::Expression, ParseError> {
-        match self.current_token.kind {
-            TokenKind::IDENT => Ok(ast::Expression::Identifier(
-                self.current_token.clone().literal,
-            )),
-            TokenKind::INT => Ok(ast::Expression::Integer(
-                self.current_token.clone().literal.parse::<i32>().unwrap(),
-            )),
-            TokenKind::MINUS => {
+        match self.current_token.clone() {
+            Token::IDENT(ident) => Ok(ast::Expression::Identifier(ident)),
+            Token::INT(i) => Ok(ast::Expression::Integer(i)),
+            Token::MINUS => {
                 self.next_token();
                 Ok(ast::Expression::Prefix {
                     operator: ast::PrefixOprator::Minus,
                     right: Box::new(self.parse_expression(Precedence::Prefix)?),
                 })
             }
-            TokenKind::BANG => {
+            Token::BANG => {
                 self.next_token();
                 Ok(ast::Expression::Prefix {
                     operator: ast::PrefixOprator::Bang,
@@ -198,23 +183,23 @@ impl<'a> Parser<'a> {
 
     fn parse_expression_statement(&mut self) -> Result<ast::Statement, ParseError> {
         let expression = self.parse_expression(Precedence::Lowest)?;
-        while !self.current_token_is(TokenKind::SEMICOLON) {
+        while !self.current_token_is(Token::SEMICOLON) {
             self.next_token();
         }
         Ok(ast::Statement::ExpressionStatement(expression))
     }
 
     pub fn parse_statement(&mut self) -> Result<ast::Statement, ParseError> {
-        match &self.current_token.kind {
-            TokenKind::LET => Ok(self.parse_let_statement()?),
-            TokenKind::RETURN => Ok(self.parse_return_statement()?),
+        match &self.current_token {
+            Token::LET => Ok(self.parse_let_statement()?),
+            Token::RETURN => Ok(self.parse_return_statement()?),
             _ => Ok(self.parse_expression_statement()?),
         }
     }
 
     pub fn parse_program(&mut self) -> Result<ast::Program, ParseError> {
         let mut program = ast::Program { statements: vec![] };
-        while self.current_token.kind != TokenKind::EOF {
+        while self.current_token != Token::EOF {
             let statement = self.parse_statement()?;
             program.statements.push(statement);
             self.next_token();
