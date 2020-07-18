@@ -175,6 +175,14 @@ impl<'a> Parser<'a> {
                     right: Box::new(self.parse_expression(Precedence::Prefix)?),
                 })
             }
+            Token::TRUE => {
+                self.next_token();
+                Ok(ast::Expression::Bool(true))
+            }
+            Token::FALSE => {
+                self.next_token();
+                Ok(ast::Expression::Bool(false))
+            }
             _ => Err(ParseError {
                 msg: "Unexpected Expression".to_string(),
             }),
@@ -278,6 +286,30 @@ mod test {
             e => panic!(format!("expect `Expression` but got {:?}", e),),
         };
         assert_eq!(ident, &5);
+    }
+
+    #[test]
+    fn test_bool_expression() {
+        let input = r#"
+            true;
+            false;
+        "#;
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program().unwrap();
+        assert_eq!(program.statements.len(), 2);
+
+        let tests = [true, false];
+        for (index, stmt) in program.statements.iter().enumerate() {
+            let exp = match stmt {
+                ast::Statement::ExpressionStatement(e) => match e {
+                    ast::Expression::Bool(b) => b,
+                    _ => panic!(format!("expect `Bool` but got {:?}", e),),
+                },
+                e => panic!(format!("expect `Expression` but got {:?}", e),),
+            };
+            assert_eq!(exp, &tests[index]);
+        }
     }
 
     #[test]

@@ -22,6 +22,7 @@ pub enum InfixOprator {
 pub enum Expression {
     Identifier(String),
     Integer(i32),
+    Bool(bool),
     Prefix {
         operator: PrefixOprator,
         right: Box<Expression>,
