@@ -6,13 +6,13 @@ use std::fmt;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd)]
 enum Precedence {
-    Call,        // myFunction(X)
-    Prefix,      // -X or !X
-    Product,     // * /
-    Sum,         // + -
-    Lessgreater, // > <
-    Equals,      // ==
     Lowest,
+    Equals,      // ==
+    Lessgreater, // > <
+    Sum,         // + -
+    Product,     // * /
+    Prefix,      // -X or !X
+    Call,        // myFunction(X)
 }
 
 impl Precedence {
@@ -83,7 +83,7 @@ impl<'a> Parser<'a> {
     }
 
     fn peek_precedence(&self) -> Precedence {
-        Precedence::FromTokenKind(&self.current_token.kind)
+        Precedence::FromTokenKind(&self.peek_token.kind)
     }
 
     fn expect_peek(&mut self, kind: TokenKind) -> bool {
@@ -135,11 +135,20 @@ impl<'a> Parser<'a> {
         Ok(stmt)
     }
 
+    fn parse_expression(&mut self, precedence: Precedence) -> Result<ast::Expression, ParseError> {
+        let mut expression = self.parse_prefix()?;
+        while !self.peek_token_is(TokenKind::SEMICOLON) && precedence < self.peek_precedence() {
+            self.next_token();
+            expression = self.parse_infix(expression)?;
+        }
+        Ok(expression)
+    }
+
     fn parse_infix(&mut self, left: ast::Expression) -> Result<ast::Expression, ParseError> {
         let operator = match &self.current_token.kind {
             TokenKind::PLUS => ast::InfixOprator::Plus,
             TokenKind::MINUS => ast::InfixOprator::Minus,
-            TokenKind::ASTERISK => ast::InfixOprator::Plus,
+            TokenKind::ASTERISK => ast::InfixOprator::Asterisk,
             TokenKind::SLASH => ast::InfixOprator::Slash,
             TokenKind::GT => ast::InfixOprator::Gt,
             TokenKind::LT => ast::InfixOprator::Lt,
@@ -147,6 +156,7 @@ impl<'a> Parser<'a> {
             TokenKind::NEQ => ast::InfixOprator::Nequal,
             _ => return Ok(left),
         };
+
         let precedence = Precedence::FromTokenKind(&self.current_token.kind);
         self.next_token();
         let right = self.parse_expression(precedence)?;
@@ -156,15 +166,6 @@ impl<'a> Parser<'a> {
             operator,
             right: Box::new(right),
         })
-    }
-
-    fn parse_expression(&mut self, precedence: Precedence) -> Result<ast::Expression, ParseError> {
-        let mut expression = self.parse_prefix()?;
-        while self.peek_token_is(TokenKind::SEMICOLON) && precedence < self.peek_precedence() {
-            self.next_token();
-            expression = self.parse_infix(expression)?;
-        }
-        Ok(expression)
     }
 
     fn parse_prefix(&mut self) -> Result<ast::Expression, ParseError> {
@@ -355,6 +356,7 @@ mod test {
             (5, ast::InfixOprator::Equal, 5),
             (5, ast::InfixOprator::Nequal, 5),
         ];
+
         for (index, stmt) in program.statements.iter().enumerate() {
             let prefix = match stmt {
                 ast::Statement::ExpressionStatement(e) => match e {
@@ -377,8 +379,9 @@ mod test {
                 },
                 e => panic!(format!("expect `Expression` but got {:?}", e),),
             };
-            //assert_eq!(*prefix.0, tests[index].0);
-            //assert_eq!(*prefix.1, tests[index].1);
+            assert_eq!(*prefix.0, tests[index].0);
+            assert_eq!(*prefix.1, tests[index].1);
+            assert_eq!(*prefix.2, tests[index].2);
         }
     }
 }
