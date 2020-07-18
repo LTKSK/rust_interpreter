@@ -5,14 +5,26 @@ use std::error::Error;
 use std::fmt;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd)]
-enum Precedens {
-    Lowest,
-    Equals,      // ==
-    Lessgreater, // > <
-    Sum,         //+
-    Product,     //*
-    Prefix,      // -X or !X
+enum Precedence {
     Call,        // myFunction(X)
+    Prefix,      // -X or !X
+    Product,     // * /
+    Sum,         // + -
+    Lessgreater, // > <
+    Equals,      // ==
+    Lowest,
+}
+
+impl Precedence {
+    fn FromTokenKind(kind: &TokenKind) -> Self {
+        match kind {
+            TokenKind::EQ | TokenKind::NEQ => Self::Equals,
+            TokenKind::LT | TokenKind::GT => Self::Lessgreater,
+            TokenKind::PLUS | TokenKind::MINUS => Self::Sum,
+            TokenKind::SLASH | TokenKind::ASTERISK => Self::Product,
+            _ => Self::Lowest,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -70,6 +82,10 @@ impl<'a> Parser<'a> {
         self.peek_token.kind == kind
     }
 
+    fn peek_precedence(&self) -> Precedence {
+        Precedence::FromTokenKind(&self.current_token.kind)
+    }
+
     fn expect_peek(&mut self, kind: TokenKind) -> bool {
         if self.peek_token_is(kind) {
             self.next_token();
@@ -119,6 +135,38 @@ impl<'a> Parser<'a> {
         Ok(stmt)
     }
 
+    fn parse_infix(&mut self, left: ast::Expression) -> Result<ast::Expression, ParseError> {
+        let operator = match &self.current_token.kind {
+            TokenKind::PLUS => ast::InfixOprator::Plus,
+            TokenKind::MINUS => ast::InfixOprator::Minus,
+            TokenKind::ASTERISK => ast::InfixOprator::Plus,
+            TokenKind::SLASH => ast::InfixOprator::Slash,
+            TokenKind::GT => ast::InfixOprator::Gt,
+            TokenKind::LT => ast::InfixOprator::Lt,
+            TokenKind::EQ => ast::InfixOprator::Equal,
+            TokenKind::NEQ => ast::InfixOprator::Nequal,
+            _ => return Ok(left),
+        };
+        let precedence = Precedence::FromTokenKind(&self.current_token.kind);
+        self.next_token();
+        let right = self.parse_expression(precedence)?;
+
+        Ok(ast::Expression::Infix {
+            left: Box::new(left),
+            operator,
+            right: Box::new(right),
+        })
+    }
+
+    fn parse_expression(&mut self, precedence: Precedence) -> Result<ast::Expression, ParseError> {
+        let mut expression = self.parse_prefix()?;
+        while self.peek_token_is(TokenKind::SEMICOLON) && precedence < self.peek_precedence() {
+            self.next_token();
+            expression = self.parse_infix(expression)?;
+        }
+        Ok(expression)
+    }
+
     fn parse_prefix(&mut self) -> Result<ast::Expression, ParseError> {
         match self.current_token.kind {
             TokenKind::IDENT => Ok(ast::Expression::Identifier(
@@ -131,14 +179,14 @@ impl<'a> Parser<'a> {
                 self.next_token();
                 Ok(ast::Expression::Prefix {
                     operator: ast::PrefixOprator::Minus,
-                    right: Box::new(self.parse_expression(Precedens::Prefix)?),
+                    right: Box::new(self.parse_expression(Precedence::Prefix)?),
                 })
             }
             TokenKind::BANG => {
                 self.next_token();
                 Ok(ast::Expression::Prefix {
                     operator: ast::PrefixOprator::Bang,
-                    right: Box::new(self.parse_expression(Precedens::Prefix)?),
+                    right: Box::new(self.parse_expression(Precedence::Prefix)?),
                 })
             }
             _ => Err(ParseError {
@@ -147,13 +195,8 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_expression(&mut self, _precedence: Precedens) -> Result<ast::Expression, ParseError> {
-        let left_exp = self.parse_prefix()?;
-        Ok(left_exp)
-    }
-
     fn parse_expression_statement(&mut self) -> Result<ast::Statement, ParseError> {
-        let expression = self.parse_expression(Precedens::Lowest)?;
+        let expression = self.parse_expression(Precedence::Lowest)?;
         while !self.current_token_is(TokenKind::SEMICOLON) {
             self.next_token();
         }
@@ -269,12 +312,72 @@ mod test {
         for (index, stmt) in program.statements.iter().enumerate() {
             let prefix = match stmt {
                 ast::Statement::ExpressionStatement(e) => match e {
-                    ast::Expression::Prefix { operator, right } => (operator, right),
+                    ast::Expression::Prefix { operator, right } => (
+                        operator,
+                        match right.as_ref() {
+                            ast::Expression::Integer(i) => i,
+                            _ => panic!("Invalid Right hand"),
+                        },
+                    ),
                     _ => panic!("Invalid Prefix Expression"),
                 },
                 e => panic!(format!("expect `Expression` but got {:?}", e),),
             };
             assert_eq!(*prefix.0, tests[index].0);
+            assert_eq!(*prefix.1, tests[index].1);
+        }
+    }
+
+    #[test]
+    fn test_infix_expression() {
+        let input = r#"
+            5 + 5;
+            5 - 5;
+            5 * 5;
+            5 / 5;
+            5 < 5;
+            5 > 5;
+            5 == 5;
+            5 != 5;
+        "#;
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program().unwrap();
+        assert_eq!(program.statements.len(), 8);
+
+        let tests = [
+            (5, ast::InfixOprator::Plus, 5),
+            (5, ast::InfixOprator::Minus, 5),
+            (5, ast::InfixOprator::Asterisk, 5),
+            (5, ast::InfixOprator::Slash, 5),
+            (5, ast::InfixOprator::Lt, 5),
+            (5, ast::InfixOprator::Gt, 5),
+            (5, ast::InfixOprator::Equal, 5),
+            (5, ast::InfixOprator::Nequal, 5),
+        ];
+        for (index, stmt) in program.statements.iter().enumerate() {
+            let prefix = match stmt {
+                ast::Statement::ExpressionStatement(e) => match e {
+                    ast::Expression::Infix {
+                        left,
+                        operator,
+                        right,
+                    } => (
+                        match left.as_ref() {
+                            ast::Expression::Integer(i) => i,
+                            _ => panic!("Invalid Right hand"),
+                        },
+                        operator,
+                        match right.as_ref() {
+                            ast::Expression::Integer(i) => i,
+                            _ => panic!("Invalid Right hand"),
+                        },
+                    ),
+                    e => panic!(format!("Invalid Infix Expression {:?}", e)),
+                },
+                e => panic!(format!("expect `Expression` but got {:?}", e),),
+            };
+            //assert_eq!(*prefix.0, tests[index].0);
             //assert_eq!(*prefix.1, tests[index].1);
         }
     }

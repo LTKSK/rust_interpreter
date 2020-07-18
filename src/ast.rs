@@ -7,6 +7,18 @@ pub enum PrefixOprator {
     Bang,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum InfixOprator {
+    Plus,
+    Minus,
+    Slash,
+    Asterisk,
+    Gt,
+    Lt,
+    Equal,
+    Nequal,
+}
+
 #[derive(Clone, Debug)]
 pub enum Expression {
     Identifier(String),
@@ -15,9 +27,13 @@ pub enum Expression {
         operator: PrefixOprator,
         right: Box<Expression>,
     },
+    Infix {
+        left: Box<Expression>,
+        operator: InfixOprator,
+        right: Box<Expression>,
+    },
 }
 
-//impl fmt::Display for Expression
 #[derive(Clone, Debug)]
 pub struct Program {
     pub statements: Vec<Statement>,
