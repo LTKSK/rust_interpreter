@@ -148,6 +148,18 @@ impl<'a> Parser<'a> {
         })
     }
 
+    fn parse_group(&mut self) -> Result<ast::Expression, ParseError> {
+        // この時点ではparenが来てるので読みすすめる
+        self.next_token();
+        let expression = self.parse_expression(Precedence::Lowest)?;
+        if !self.expect_peek(Token::RPAREN) {
+            return Err(ParseError {
+                msg: "Parentheses does not closed.".to_string(),
+            });
+        }
+        Ok(expression)
+    }
+
     fn parse_prefix(&mut self) -> Result<ast::Expression, ParseError> {
         match self.current_token.clone() {
             Token::IDENT(ident) => Ok(ast::Expression::Identifier(ident)),
@@ -161,6 +173,7 @@ impl<'a> Parser<'a> {
                     right: Box::new(self.parse_expression(Precedence::Prefix)?),
                 })
             }
+            Token::LPAREN => Ok(self.parse_group()?),
             Token::BANG => {
                 self.next_token();
                 Ok(ast::Expression::Prefix {
@@ -242,7 +255,7 @@ mod test {
         let mut parser = Parser::new(&mut lexer);
         let program = parser.parse_program().unwrap();
         assert_eq!(program.statements.len(), 3);
-        let tests = vec!["return ident;", "return ident;", "return ident;"];
+        let tests = vec!["return dummy;", "return dummy;", "return dummy;"];
         for (index, stmt) in program.statements.iter().enumerate() {
             assert_eq!(format!("{}", stmt), tests[index]);
         }

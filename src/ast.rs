@@ -6,6 +6,15 @@ pub enum PrefixOprator {
     Bang,
 }
 
+impl fmt::Display for PrefixOprator {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Minus => write!(f, "-"),
+            Self::Bang => write!(f, "!"),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum InfixOprator {
     Plus,
@@ -16,6 +25,21 @@ pub enum InfixOprator {
     Lt,
     Equal,
     Nequal,
+}
+
+impl fmt::Display for InfixOprator {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Plus => write!(f, "!"),
+            Self::Minus => write!(f, "-"),
+            Self::Slash => write!(f, "/"),
+            Self::Asterisk => write!(f, "*"),
+            Self::Gt => write!(f, ">"),
+            Self::Lt => write!(f, "<"),
+            Self::Equal => write!(f, "=="),
+            Self::Nequal => write!(f, "!="),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -34,6 +58,22 @@ pub enum Expression {
     },
 }
 
+impl fmt::Display for Expression {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Identifier(i) => write!(f, "{}", &i),
+            Self::Integer(i) => write!(f, "{}", i),
+            Self::Bool(b) => write!(f, "{}", b),
+            Self::Prefix { operator, right } => write!(f, "{}{}", operator, right),
+            Self::Infix {
+                left,
+                operator,
+                right,
+            } => write!(f, "{} {} {}", left, operator, right),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Program {
     pub statements: Vec<Statement>,
@@ -50,9 +90,9 @@ pub enum Statement {
 impl fmt::Display for Statement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Let { name, .. } => write!(f, "{}", format!("let {} = ident;", name)),
-            Self::Return(e) => write!(f, "{}", format!("return ident;")),
-            Self::ExpressionStatement(e) => write!(f, "{}", format!("{:?}", e)),
+            Self::Let { name, .. } => write!(f, "let {} = ident;", name),
+            Self::Return(e) => write!(f, "return {};", e),
+            Self::ExpressionStatement(e) => write!(f, "{}", e),
         }
     }
 }
