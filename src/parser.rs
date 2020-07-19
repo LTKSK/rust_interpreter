@@ -100,7 +100,7 @@ impl<'a> Parser<'a> {
         };
         if !self.expect_peek(Token::ASSIGN) {
             return Err(ParseError {
-                msg: format!("expect `IDENT` but got `{}`", self.peek_token,),
+                msg: format!("expect `IDENT` but got `{}`", self.peek_token),
             });
         }
         // TODO: implelemnt expression
@@ -122,15 +122,6 @@ impl<'a> Parser<'a> {
             self.next_token();
         }
         Ok(stmt)
-    }
-
-    fn parse_expression(&mut self, precedence: Precedence) -> Result<ast::Expression, ParseError> {
-        let mut expression = self.parse_prefix()?;
-        while !self.peek_token_is(Token::SEMICOLON) && precedence < self.peek_precedence() {
-            self.next_token();
-            expression = self.parse_infix(expression)?;
-        }
-        Ok(expression)
     }
 
     fn parse_infix(&mut self, left: ast::Expression) -> Result<ast::Expression, ParseError> {
@@ -161,6 +152,8 @@ impl<'a> Parser<'a> {
         match self.current_token.clone() {
             Token::IDENT(ident) => Ok(ast::Expression::Identifier(ident)),
             Token::INT(i) => Ok(ast::Expression::Integer(i)),
+            Token::TRUE => Ok(ast::Expression::Bool(true)),
+            Token::FALSE => Ok(ast::Expression::Bool(false)),
             Token::MINUS => {
                 self.next_token();
                 Ok(ast::Expression::Prefix {
@@ -175,18 +168,19 @@ impl<'a> Parser<'a> {
                     right: Box::new(self.parse_expression(Precedence::Prefix)?),
                 })
             }
-            Token::TRUE => {
-                self.next_token();
-                Ok(ast::Expression::Bool(true))
-            }
-            Token::FALSE => {
-                self.next_token();
-                Ok(ast::Expression::Bool(false))
-            }
             _ => Err(ParseError {
                 msg: "Unexpected Expression".to_string(),
             }),
         }
+    }
+
+    fn parse_expression(&mut self, precedence: Precedence) -> Result<ast::Expression, ParseError> {
+        let mut expression = self.parse_prefix()?;
+        while !self.peek_token_is(Token::SEMICOLON) && precedence < self.peek_precedence() {
+            self.next_token();
+            expression = self.parse_infix(expression)?;
+        }
+        Ok(expression)
     }
 
     fn parse_expression_statement(&mut self) -> Result<ast::Statement, ParseError> {
@@ -375,7 +369,7 @@ mod test {
         ];
 
         for (index, stmt) in program.statements.iter().enumerate() {
-            let prefix = match stmt {
+            let infix = match stmt {
                 ast::Statement::ExpressionStatement(e) => match e {
                     ast::Expression::Infix {
                         left,
@@ -384,21 +378,65 @@ mod test {
                     } => (
                         match left.as_ref() {
                             ast::Expression::Integer(i) => i,
-                            _ => panic!("Invalid Right hand"),
+                            _ => panic!("Invalid left hand"),
                         },
                         operator,
                         match right.as_ref() {
                             ast::Expression::Integer(i) => i,
-                            _ => panic!("Invalid Right hand"),
+                            _ => panic!("Invalid right hand"),
                         },
                     ),
                     e => panic!(format!("Invalid Infix Expression {:?}", e)),
                 },
                 e => panic!(format!("expect `Expression` but got {:?}", e),),
             };
-            assert_eq!(*prefix.0, tests[index].0);
-            assert_eq!(*prefix.1, tests[index].1);
-            assert_eq!(*prefix.2, tests[index].2);
+            assert_eq!(*infix.0, tests[index].0);
+            assert_eq!(*infix.1, tests[index].1);
+            assert_eq!(*infix.2, tests[index].2);
+        }
+    }
+
+    #[test]
+    fn test_infix_expression_with_bool() {
+        let input = r#"
+            true == true;
+            true != false;
+        "#;
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program().unwrap();
+        assert_eq!(program.statements.len(), 2);
+
+        let tests = [
+            (true, ast::InfixOprator::Equal, true),
+            (true, ast::InfixOprator::Nequal, false),
+        ];
+
+        for (index, stmt) in program.statements.iter().enumerate() {
+            let infix = match stmt {
+                ast::Statement::ExpressionStatement(e) => match e {
+                    ast::Expression::Infix {
+                        left,
+                        operator,
+                        right,
+                    } => (
+                        match left.as_ref() {
+                            ast::Expression::Bool(b) => b,
+                            _ => panic!("Invalid left hand"),
+                        },
+                        operator,
+                        match right.as_ref() {
+                            ast::Expression::Bool(b) => b,
+                            _ => panic!("Invalid right hand"),
+                        },
+                    ),
+                    e => panic!(format!("Invalid Infix Expression {:?}", e)),
+                },
+                e => panic!(format!("expect `Expression` but got {:?}", e),),
+            };
+            assert_eq!(*infix.0, tests[index].0);
+            assert_eq!(*infix.1, tests[index].1);
+            assert_eq!(*infix.2, tests[index].2);
         }
     }
 }
