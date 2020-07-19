@@ -61,6 +61,10 @@ pub enum Expression {
         consequence: Box<Statement>,
         alternative: Option<Box<Statement>>,
     },
+    Function {
+        parameters: Vec<Expression>,
+        Body: Box<Statement>,
+    },
 }
 
 impl fmt::Display for Expression {
