@@ -16,7 +16,7 @@ enum Precedence {
 }
 
 impl Precedence {
-    fn FromToken(kind: &Token) -> Self {
+    fn from_token(kind: &Token) -> Self {
         match kind {
             Token::EQ | Token::NEQ => Self::Equals,
             Token::LT | Token::GT => Self::Lessgreater,
@@ -77,7 +77,7 @@ impl<'a> Parser<'a> {
     }
 
     fn peek_precedence(&self) -> Precedence {
-        Precedence::FromToken(&self.peek_token)
+        Precedence::from_token(&self.peek_token)
     }
 
     fn expect_peek(&mut self, kind: Token) -> bool {
@@ -137,7 +137,7 @@ impl<'a> Parser<'a> {
             _ => return Ok(left),
         };
 
-        let precedence = Precedence::FromToken(&self.current_token);
+        let precedence = Precedence::from_token(&self.current_token);
         self.next_token();
         let right = self.parse_expression(precedence)?;
 
@@ -148,16 +148,67 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_group(&mut self) -> Result<ast::Expression, ParseError> {
+    fn parse_group_expression(&mut self) -> Result<ast::Expression, ParseError> {
         // この時点ではparenが来てるので読みすすめる
         self.next_token();
         let expression = self.parse_expression(Precedence::Lowest)?;
         if !self.expect_peek(Token::RPAREN) {
             return Err(ParseError {
-                msg: "Parentheses does not closed.".to_string(),
+                msg: "Parentheses are not closed.".to_string(),
             });
         }
         Ok(expression)
+    }
+
+    fn parse_block_statement(&mut self) -> Result<ast::Statement, ParseError> {
+        self.next_token();
+        let mut statements = vec![];
+        while !self.current_token_is(Token::RBRACE) && !self.current_token_is(Token::EOF) {
+            let stmt = self.parse_statement()?;
+            statements.push(stmt);
+            self.next_token();
+        }
+        Ok(ast::Statement::Block(statements))
+    }
+
+    fn parse_if_expression(&mut self) -> Result<ast::Expression, ParseError> {
+        if !self.expect_peek(Token::LPAREN) {
+            return Err(ParseError {
+                msg: format!("Unexpected token {:?}. wanted LPAREN", self.peek_token),
+            });
+        }
+        self.next_token();
+        let condition = self.parse_expression(Precedence::Lowest)?;
+        if !self.expect_peek(Token::RPAREN) {
+            return Err(ParseError {
+                msg: format!("Parentheses are not closed."),
+            });
+        }
+        //if文の中身
+        if !self.expect_peek(Token::LBRACE) {
+            return Err(ParseError {
+                msg: format!("Unexpected token {:?}. wanted LBRACE", self.peek_token),
+            });
+        }
+        let consequence = self.parse_block_statement()?;
+
+        let alternative = if self.expect_peek(Token::ELSE) {
+            self.next_token();
+            if !self.expect_peek(Token::LBRACE) {
+                return Err(ParseError {
+                    msg: format!("Unexpected token {:?}. wanted LBRACE", self.peek_token),
+                });
+            }
+            let stmt = self.parse_block_statement()?;
+            Some(Box::new(stmt))
+        } else {
+            None
+        };
+        Ok(ast::Expression::If {
+            condition: Box::new(condition),
+            consequence: Box::new(consequence),
+            alternative,
+        })
     }
 
     fn parse_prefix(&mut self) -> Result<ast::Expression, ParseError> {
@@ -166,6 +217,7 @@ impl<'a> Parser<'a> {
             Token::INT(i) => Ok(ast::Expression::Integer(i)),
             Token::TRUE => Ok(ast::Expression::Bool(true)),
             Token::FALSE => Ok(ast::Expression::Bool(false)),
+            Token::IF => self.parse_if_expression(),
             Token::MINUS => {
                 self.next_token();
                 Ok(ast::Expression::Prefix {
@@ -173,7 +225,7 @@ impl<'a> Parser<'a> {
                     right: Box::new(self.parse_expression(Precedence::Prefix)?),
                 })
             }
-            Token::LPAREN => Ok(self.parse_group()?),
+            Token::LPAREN => self.parse_group_expression(),
             Token::BANG => {
                 self.next_token();
                 Ok(ast::Expression::Prefix {
@@ -201,7 +253,7 @@ impl<'a> Parser<'a> {
         while !self.current_token_is(Token::SEMICOLON) {
             self.next_token();
         }
-        Ok(ast::Statement::ExpressionStatement(expression))
+        Ok(ast::Statement::Expression(expression))
     }
 
     pub fn parse_statement(&mut self) -> Result<ast::Statement, ParseError> {
@@ -214,7 +266,7 @@ impl<'a> Parser<'a> {
 
     pub fn parse_program(&mut self) -> Result<ast::Program, ParseError> {
         let mut program = ast::Program { statements: vec![] };
-        while self.current_token != Token::EOF {
+        while !self.current_token_is(Token::EOF) {
             let statement = self.parse_statement()?;
             program.statements.push(statement);
             self.next_token();
@@ -269,7 +321,7 @@ mod test {
         let program = parser.parse_program().unwrap();
         assert_eq!(program.statements.len(), 1);
         let ident = match &program.statements[0] {
-            ast::Statement::ExpressionStatement(e) => match e {
+            ast::Statement::Expression(e) => match e {
                 ast::Expression::Identifier(s) => s,
                 _ => "unreach",
             },
@@ -286,7 +338,7 @@ mod test {
         let program = parser.parse_program().unwrap();
         assert_eq!(program.statements.len(), 1);
         let ident = match &program.statements[0] {
-            ast::Statement::ExpressionStatement(e) => match e {
+            ast::Statement::Expression(e) => match e {
                 ast::Expression::Integer(i) => i,
                 _ => &999,
             },
@@ -309,7 +361,7 @@ mod test {
         let tests = [true, false];
         for (index, stmt) in program.statements.iter().enumerate() {
             let exp = match stmt {
-                ast::Statement::ExpressionStatement(e) => match e {
+                ast::Statement::Expression(e) => match e {
                     ast::Expression::Bool(b) => b,
                     _ => panic!(format!("expect `Bool` but got {:?}", e),),
                 },
@@ -336,7 +388,7 @@ mod test {
         ];
         for (index, stmt) in program.statements.iter().enumerate() {
             let prefix = match stmt {
-                ast::Statement::ExpressionStatement(e) => match e {
+                ast::Statement::Expression(e) => match e {
                     ast::Expression::Prefix { operator, right } => (
                         operator,
                         match right.as_ref() {
@@ -383,7 +435,7 @@ mod test {
 
         for (index, stmt) in program.statements.iter().enumerate() {
             let infix = match stmt {
-                ast::Statement::ExpressionStatement(e) => match e {
+                ast::Statement::Expression(e) => match e {
                     ast::Expression::Infix {
                         left,
                         operator,
@@ -427,7 +479,7 @@ mod test {
 
         for (index, stmt) in program.statements.iter().enumerate() {
             let infix = match stmt {
-                ast::Statement::ExpressionStatement(e) => match e {
+                ast::Statement::Expression(e) => match e {
                     ast::Expression::Infix {
                         left,
                         operator,
@@ -451,5 +503,36 @@ mod test {
             assert_eq!(*infix.1, tests[index].1);
             assert_eq!(*infix.2, tests[index].2);
         }
+    }
+
+    #[test]
+    fn test_if_expression() {
+        let input = r#"
+          if (x < y){ x; };
+        "#;
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program().unwrap();
+        assert_eq!(program.statements.len(), 1);
+
+        let stmt = &program.statements[0];
+        // panicしなければOK
+        match stmt {
+            ast::Statement::Expression(e) => match e {
+                ast::Expression::If {
+                    condition,
+                    consequence,
+                    alternative,
+                } => {
+                    assert_eq!(format!("{}", condition.as_ref()), "x < y");
+                    assert_eq!(format!("{}", consequence.as_ref()), "x");
+                    if let Some(_) = alternative {
+                        panic!("Alternative must be None");
+                    };
+                }
+                e => panic!(format!("Invalid Infix Expression {:?}", e)),
+            },
+            e => panic!(format!("expect `Expression` but got {:?}", e),),
+        };
     }
 }

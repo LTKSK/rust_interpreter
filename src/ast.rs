@@ -56,6 +56,11 @@ pub enum Expression {
         operator: InfixOprator,
         right: Box<Expression>,
     },
+    If {
+        condition: Box<Expression>,
+        consequence: Box<Statement>,
+        alternative: Option<Box<Statement>>,
+    },
 }
 
 impl fmt::Display for Expression {
@@ -70,6 +75,7 @@ impl fmt::Display for Expression {
                 operator,
                 right,
             } => write!(f, "{} {} {}", left, operator, right),
+            _ => write!(f, "todo exp"),
         }
     }
 }
@@ -84,7 +90,8 @@ pub enum Statement {
     // nameが変数名で、valueが=の右辺
     Let { name: String, value: Expression },
     Return(Expression),
-    ExpressionStatement(Expression),
+    Expression(Expression),
+    Block(Vec<Statement>),
 }
 
 impl fmt::Display for Statement {
@@ -92,7 +99,13 @@ impl fmt::Display for Statement {
         match self {
             Self::Let { name, .. } => write!(f, "let {} = ident;", name),
             Self::Return(e) => write!(f, "return {};", e),
-            Self::ExpressionStatement(e) => write!(f, "{}", e),
+            Self::Expression(e) => write!(f, "{}", e),
+            Self::Block(stmts) => {
+                for s in stmts.iter() {
+                    write!(f, "{}", s);
+                }
+                Ok(())
+            }
         }
     }
 }
