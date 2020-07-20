@@ -193,7 +193,6 @@ impl<'a> Parser<'a> {
         let consequence = self.parse_block_statement()?;
 
         let alternative = if self.expect_peek(Token::ELSE) {
-            self.next_token();
             if !self.expect_peek(Token::LBRACE) {
                 return Err(ParseError {
                     msg: format!("Unexpected token {:?}. wanted LBRACE", self.peek_token),
@@ -526,8 +525,8 @@ mod test {
                 } => {
                     assert_eq!(format!("{}", condition.as_ref()), "x < y");
                     assert_eq!(format!("{}", consequence.as_ref()), "x");
-                    if let Some(_) = alternative {
-                        panic!("Alternative must be None");
+                    if let Some(a) = alternative {
+                        assert_eq!(format!("{}", a.as_ref()), "y");
                     };
                 }
                 e => panic!(format!("Invalid Infix Expression {:?}", e)),
@@ -537,9 +536,9 @@ mod test {
     }
 
     #[test]
-    fn test_function_expression() {
+    fn test_if_else_expression() {
         let input = r#"
-          fn (x , y){ x + y; }
+          if (x < y){ x } else { y };
         "#;
         let mut lexer = Lexer::new(input);
         let mut parser = Parser::new(&mut lexer);
@@ -557,9 +556,31 @@ mod test {
                 } => {
                     assert_eq!(format!("{}", condition.as_ref()), "x < y");
                     assert_eq!(format!("{}", consequence.as_ref()), "x");
-                    if let Some(_) = alternative {
-                        panic!("Alternative must be None");
+                    if let Some(a) = alternative {
+                        assert_eq!(format!("{}", a.as_ref()), "y");
                     };
+                }
+                e => panic!(format!("Invalid Infix Expression {:?}", e)),
+            },
+            e => panic!(format!("expect `Expression` but got {:?}", e),),
+        };
+    }
+
+    fn test_function_expression() {
+        let input = r#"
+          fn (x, y){ x + y; }
+        "#;
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program().unwrap();
+        assert_eq!(program.statements.len(), 1);
+
+        let stmt = &program.statements[0];
+        // panicしなければOK
+        match stmt {
+            ast::Statement::Expression(e) => match e {
+                ast::Expression::Function { parameters, body } => {
+                    //assert_eq!(format!("{}", parameters), "x < y");
                 }
                 e => panic!(format!("Invalid Infix Expression {:?}", e)),
             },

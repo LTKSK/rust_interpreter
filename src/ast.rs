@@ -63,7 +63,7 @@ pub enum Expression {
     },
     Function {
         parameters: Vec<Expression>,
-        Body: Box<Statement>,
+        body: Box<Statement>,
     },
 }
 
