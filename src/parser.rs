@@ -250,7 +250,7 @@ impl<'a> Parser<'a> {
 
     fn parse_expression_statement(&mut self) -> Result<ast::Statement, ParseError> {
         let expression = self.parse_expression(Precedence::Lowest)?;
-        while !self.current_token_is(Token::SEMICOLON) {
+        if self.peek_token_is(Token::SEMICOLON) {
             self.next_token();
         }
         Ok(ast::Statement::Expression(expression))
@@ -508,7 +508,38 @@ mod test {
     #[test]
     fn test_if_expression() {
         let input = r#"
-          if (x < y){ x; };
+          if (x < y){ x };
+        "#;
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program().unwrap();
+        assert_eq!(program.statements.len(), 1);
+
+        let stmt = &program.statements[0];
+        // panicしなければOK
+        match stmt {
+            ast::Statement::Expression(e) => match e {
+                ast::Expression::If {
+                    condition,
+                    consequence,
+                    alternative,
+                } => {
+                    assert_eq!(format!("{}", condition.as_ref()), "x < y");
+                    assert_eq!(format!("{}", consequence.as_ref()), "x");
+                    if let Some(_) = alternative {
+                        panic!("Alternative must be None");
+                    };
+                }
+                e => panic!(format!("Invalid Infix Expression {:?}", e)),
+            },
+            e => panic!(format!("expect `Expression` but got {:?}", e),),
+        };
+    }
+
+    #[test]
+    fn test_function_expression() {
+        let input = r#"
+          fn (x , y){ x + y; }
         "#;
         let mut lexer = Lexer::new(input);
         let mut parser = Parser::new(&mut lexer);
