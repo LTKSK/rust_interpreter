@@ -25,6 +25,7 @@ pub enum InfixOprator {
     Lt,
     Equal,
     Nequal,
+    Lparen, //関数呼び出しはLparenをinfixとして捉える
 }
 
 impl fmt::Display for InfixOprator {
@@ -38,6 +39,7 @@ impl fmt::Display for InfixOprator {
             Self::Lt => write!(f, "<"),
             Self::Equal => write!(f, "=="),
             Self::Nequal => write!(f, "!="),
+            Self::Lparen => write!(f, "("),
         }
     }
 }

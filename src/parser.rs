@@ -22,6 +22,7 @@ impl Precedence {
             Token::LT | Token::GT => Self::Lessgreater,
             Token::PLUS | Token::MINUS => Self::Sum,
             Token::SLASH | Token::ASTERISK => Self::Product,
+            Token::LPAREN => Self::Call,
             _ => Self::Lowest,
         }
     }
@@ -124,6 +125,38 @@ impl<'a> Parser<'a> {
         Ok(stmt)
     }
 
+    fn parse_call_arguments(&mut self) -> Result<Vec<ast::Expression>, ParseError> {
+        let mut arguments = vec![];
+        if self.peek_token_is(Token::RPAREN) {
+            self.next_token();
+            return Ok(arguments);
+        }
+        self.next_token();
+        arguments.push(self.parse_expression(Precedence::Lowest)?);
+        while self.peek_token_is(Token::COMMA) {
+            // カンマ消費してその次のtokenまで
+            self.next_token();
+            self.next_token();
+            arguments.push(self.parse_expression(Precedence::Lowest)?);
+        }
+        if !self.expect_peek(Token::RPAREN) {
+            return Err(ParseError {
+                msg: format!("Expect `)`, but got {:?}", self.peek_token),
+            });
+        }
+        Ok(arguments)
+    }
+
+    fn parse_call_expression(
+        &mut self,
+        function: ast::Expression,
+    ) -> Result<ast::Expression, ParseError> {
+        Ok(ast::Expression::Call {
+            function: Box::new(function),
+            arguments: self.parse_call_arguments()?,
+        })
+    }
+
     fn parse_infix(&mut self, left: ast::Expression) -> Result<ast::Expression, ParseError> {
         let operator = match &self.current_token {
             Token::PLUS => ast::InfixOprator::Plus,
@@ -134,13 +167,15 @@ impl<'a> Parser<'a> {
             Token::LT => ast::InfixOprator::Lt,
             Token::EQ => ast::InfixOprator::Equal,
             Token::NEQ => ast::InfixOprator::Nequal,
+            Token::LPAREN => {
+                return Ok(self.parse_call_expression(left))?;
+                //ast::InfixOprator::Lparen,
+            }
             _ => return Ok(left),
         };
-
         let precedence = Precedence::from_token(&self.current_token);
         self.next_token();
         let right = self.parse_expression(precedence)?;
-
         Ok(ast::Expression::Infix {
             left: Box::new(left),
             operator,
@@ -154,7 +189,7 @@ impl<'a> Parser<'a> {
         let expression = self.parse_expression(Precedence::Lowest)?;
         if !self.expect_peek(Token::RPAREN) {
             return Err(ParseError {
-                msg: "Parentheses are not closed.".to_string(),
+                msg: "Parentheses are not closed. in if expression".to_string(),
             });
         }
         Ok(expression)
@@ -181,7 +216,7 @@ impl<'a> Parser<'a> {
         let condition = self.parse_expression(Precedence::Lowest)?;
         if !self.expect_peek(Token::RPAREN) {
             return Err(ParseError {
-                msg: format!("Parentheses are not closed."),
+                msg: format!("Parentheses are not closed. in if expression"),
             });
         }
         //if文の中身
@@ -675,7 +710,7 @@ mod test {
                     assert_eq!(format!("{}", arguments[1]), "2 * 3");
                     assert_eq!(format!("{}", arguments[2]), "4 + 5");
                     assert_eq!(format!("{}", function), "add");
-                    assert_eq!(format!("{}", e), "add(1, 2 * 3, 4+5")
+                    assert_eq!(format!("{}", e), "add(1, 2 * 3, 4 + 5)")
                 }
                 e => panic!(format!("Invalid Function Expression {:?}", e)),
             },
