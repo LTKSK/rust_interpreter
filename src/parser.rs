@@ -104,25 +104,25 @@ impl<'a> Parser<'a> {
                 msg: format!("expect `IDENT` but got `{}`", self.peek_token),
             });
         }
-        // TODO: implelemnt expression
-        while !self.current_token_is(Token::SEMICOLON) {
+        // assignの次のtoken。右辺の始まり
+        self.next_token();
+        let value = self.parse_expression(Precedence::Lowest)?;
+        if self.peek_token_is(Token::SEMICOLON) {
             self.next_token();
         }
-        let stmt = ast::Statement::Let {
+        Ok(ast::Statement::Let {
             name: identifier,
-            value: ast::Expression::Identifier("dummy".to_string()),
-        };
-        Ok(stmt)
+            value,
+        })
     }
 
     pub fn parse_return_statement(&mut self) -> Result<ast::Statement, ParseError> {
-        let stmt = ast::Statement::Return(ast::Expression::Identifier("dummy".to_string()));
         self.next_token();
-        // TODO: ここにExpressionのparse
-        while !self.current_token_is(Token::SEMICOLON) {
+        let return_value = self.parse_expression(Precedence::Lowest)?;
+        if self.peek_token_is(Token::SEMICOLON) {
             self.next_token();
         }
-        Ok(stmt)
+        Ok(ast::Statement::Return(return_value))
     }
 
     fn parse_call_arguments(&mut self) -> Result<Vec<ast::Expression>, ParseError> {
@@ -403,7 +403,7 @@ mod test {
         let mut parser = Parser::new(&mut lexer);
         let program = parser.parse_program().unwrap();
         assert_eq!(program.statements.len(), 3);
-        let tests = vec!["return dummy;", "return dummy;", "return dummy;"];
+        let tests = vec!["return 5;", "return 10;", "return 993322;"];
         for (index, stmt) in program.statements.iter().enumerate() {
             assert_eq!(format!("{}", stmt), tests[index]);
         }
