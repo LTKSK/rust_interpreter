@@ -10,7 +10,7 @@ impl fmt::Display for PrefixOprator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Minus => write!(f, "-"),
-            Self::Bang => write!(f, "!"),
+            Self::Bang => write!(f, "+"),
         }
     }
 }
@@ -30,7 +30,7 @@ pub enum InfixOprator {
 impl fmt::Display for InfixOprator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Plus => write!(f, "!"),
+            Self::Plus => write!(f, "+"),
             Self::Minus => write!(f, "-"),
             Self::Slash => write!(f, "/"),
             Self::Asterisk => write!(f, "*"),
@@ -65,6 +65,10 @@ pub enum Expression {
         parameters: Vec<Expression>,
         body: Box<Statement>,
     },
+    Call {
+        function: Box<Expression>,
+        arguments: Vec<Expression>,
+    },
 }
 
 impl fmt::Display for Expression {
@@ -79,6 +83,19 @@ impl fmt::Display for Expression {
                 operator,
                 right,
             } => write!(f, "{} {} {}", left, operator, right),
+            Self::Call {
+                function,
+                arguments,
+            } => write!(
+                f,
+                "{}({})",
+                &function,
+                arguments
+                    .iter()
+                    .map(|a| format!("{}", a))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
             _ => write!(f, "todo exp"),
         }
     }

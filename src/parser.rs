@@ -187,7 +187,7 @@ impl<'a> Parser<'a> {
         //if文の中身
         if !self.expect_peek(Token::LBRACE) {
             return Err(ParseError {
-                msg: format!("Unexpected token {:?}. wanted LBRACE", self.peek_token),
+                msg: format!("Unexpected token {:?}. wanted `{{`", self.peek_token),
             });
         }
         let consequence = self.parse_block_statement()?;
@@ -195,7 +195,7 @@ impl<'a> Parser<'a> {
         let alternative = if self.expect_peek(Token::ELSE) {
             if !self.expect_peek(Token::LBRACE) {
                 return Err(ParseError {
-                    msg: format!("Unexpected token {:?}. wanted LBRACE", self.peek_token),
+                    msg: format!("Unexpected token {:?}. wanted `{{`", self.peek_token),
                 });
             }
             let stmt = self.parse_block_statement()?;
@@ -210,6 +210,67 @@ impl<'a> Parser<'a> {
         })
     }
 
+    fn parse_function_params(&mut self) -> Result<Vec<ast::Expression>, ParseError> {
+        if self.peek_token_is(Token::RPAREN) {
+            self.next_token();
+            return Ok(vec![]);
+        }
+        self.next_token();
+        let mut identifiers = vec![];
+        let identifier = match self.current_token.clone() {
+            Token::IDENT(ident) => ast::Expression::Identifier(ident),
+            t => {
+                return Err(ParseError {
+                    msg: format!("Expected identifier, but got {:?}", t),
+                })
+            }
+        };
+        identifiers.push(identifier);
+
+        while self.peek_token_is(Token::COMMA) {
+            // camma消費
+            self.next_token();
+            // cammaの次のtokenをcurrentにする
+            self.next_token();
+
+            let identifier = match self.current_token.clone() {
+                Token::IDENT(ident) => ast::Expression::Identifier(ident),
+                t => {
+                    return Err(ParseError {
+                        msg: format!("Expected identifier, but got {:?}", t),
+                    })
+                }
+            };
+            identifiers.push(identifier);
+        }
+
+        if !self.expect_peek(Token::RPAREN) {
+            return Err(ParseError {
+                msg: format!("Unexpected token {:?}. wanted `}}`", self.peek_token),
+            });
+        }
+        Ok(identifiers)
+    }
+
+    fn parse_function_expression(&mut self) -> Result<ast::Expression, ParseError> {
+        if !self.expect_peek(Token::LPAREN) {
+            return Err(ParseError {
+                msg: format!("Unexpected token {:?}. wanted `(`", self.peek_token),
+            });
+        }
+        let parameters = self.parse_function_params()?;
+        if !self.expect_peek(Token::LBRACE) {
+            return Err(ParseError {
+                msg: format!("Unexpected token {:?}. wanted `{{`", self.peek_token),
+            });
+        }
+        let body = self.parse_block_statement()?;
+        Ok(ast::Expression::Function {
+            parameters,
+            body: Box::new(body),
+        })
+    }
+
     fn parse_prefix(&mut self) -> Result<ast::Expression, ParseError> {
         match self.current_token.clone() {
             Token::IDENT(ident) => Ok(ast::Expression::Identifier(ident)),
@@ -217,6 +278,7 @@ impl<'a> Parser<'a> {
             Token::TRUE => Ok(ast::Expression::Bool(true)),
             Token::FALSE => Ok(ast::Expression::Bool(false)),
             Token::IF => self.parse_if_expression(),
+            Token::FUNCTION => self.parse_function_expression(),
             Token::MINUS => {
                 self.next_token();
                 Ok(ast::Expression::Prefix {
@@ -566,6 +628,7 @@ mod test {
         };
     }
 
+    #[test]
     fn test_function_expression() {
         let input = r#"
           fn (x, y){ x + y; }
@@ -580,9 +643,41 @@ mod test {
         match stmt {
             ast::Statement::Expression(e) => match e {
                 ast::Expression::Function { parameters, body } => {
-                    //assert_eq!(format!("{}", parameters), "x < y");
+                    assert_eq!(format!("{}", parameters[0]), "x");
+                    assert_eq!(format!("{}", parameters[1]), "y");
+                    assert_eq!(format!("{}", body), "x + y");
                 }
-                e => panic!(format!("Invalid Infix Expression {:?}", e)),
+                e => panic!(format!("Invalid Function Expression {:?}", e)),
+            },
+            e => panic!(format!("expect `Expression` but got {:?}", e),),
+        };
+    }
+
+    #[test]
+    fn test_call_expression() {
+        let input = r#"
+          add(1, 2*3, 4+5);
+        "#;
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program().unwrap();
+        assert_eq!(program.statements.len(), 1);
+
+        let stmt = &program.statements[0];
+        // panicしなければOK
+        match stmt {
+            ast::Statement::Expression(e) => match e {
+                ast::Expression::Call {
+                    function,
+                    arguments,
+                } => {
+                    assert_eq!(format!("{}", arguments[0]), "1");
+                    assert_eq!(format!("{}", arguments[1]), "2 * 3");
+                    assert_eq!(format!("{}", arguments[2]), "4 + 5");
+                    assert_eq!(format!("{}", function), "add");
+                    assert_eq!(format!("{}", e), "add(1, 2 * 3, 4+5")
+                }
+                e => panic!(format!("Invalid Function Expression {:?}", e)),
             },
             e => panic!(format!("expect `Expression` but got {:?}", e),),
         };
