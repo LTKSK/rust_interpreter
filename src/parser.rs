@@ -385,9 +385,8 @@ mod test {
         let mut parser = Parser::new(&mut lexer);
         let program = parser.parse_program().unwrap();
         assert_eq!(program.statements.len(), 3);
-        let tests = vec!["let x = ident;", "let y = ident;", "let foobar = ident;"];
+        let tests = vec!["let x = 5;", "let y = 10;", "let foobar = 838383;"];
         for (index, stmt) in program.statements.iter().enumerate() {
-            // TODO ident となっているところはexpressionを定義したら実装
             assert_eq!(format!("{}", stmt), tests[index]);
         }
     }

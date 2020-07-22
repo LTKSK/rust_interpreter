@@ -120,7 +120,7 @@ pub enum Statement {
 impl fmt::Display for Statement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Let { name, .. } => write!(f, "let {} = ident;", name),
+            Self::Let { name, value } => write!(f, "let {} = {};", name, value),
             Self::Return(e) => write!(f, "return {};", e),
             Self::Expression(e) => write!(f, "{}", e),
             Self::Block(stmts) => {
