@@ -4,9 +4,9 @@ mod evaluator;
 mod lexer;
 mod object;
 mod parser;
-mod repr;
+mod repl;
 mod token;
-use repr::start;
+use repl::start;
 
 fn main() {
     start(stdin(), stdout());
