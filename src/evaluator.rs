@@ -22,7 +22,7 @@ impl Error for EvalError {
     }
 }
 
-fn eval_bang_operator_expression(right: Object) -> Result<Object, EvalError> {
+fn eval_prefix_bang_operator(right: Object) -> Result<Object, EvalError> {
     match right {
         Object::Boolean(b) => match b {
             true => Ok(Object::Boolean(false)),
@@ -34,9 +34,17 @@ fn eval_bang_operator_expression(right: Object) -> Result<Object, EvalError> {
     }
 }
 
+fn eval_prefix_minus_operator(right: Object) -> Result<Object, EvalError> {
+    match right {
+        Object::Integer(i) => Ok(Object::Integer(-i)),
+        _ => Ok(Object::Null),
+    }
+}
+
 fn eval_prefix_expression(op: ast::PrefixOprator, right: Object) -> Result<Object, EvalError> {
     match op {
-        ast::PrefixOprator::Bang => Ok(eval_bang_operator_expression(right)?),
+        ast::PrefixOprator::Bang => Ok(eval_prefix_bang_operator(right)?),
+        ast::PrefixOprator::Minus => Ok(eval_prefix_minus_operator(right)?),
         _ => Ok(Object::Null),
     }
 }
@@ -78,7 +86,7 @@ mod test {
 
     #[test]
     fn test_eval_integer() {
-        let tests = vec![("5", 5), ("10", 10)];
+        let tests = vec![("5", 5), ("10", 10), ("-10", -10)];
         for (input, expect) in tests {
             let mut l = Lexer::new(input);
             let mut p = Parser::new(&mut l);
