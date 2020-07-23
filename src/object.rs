@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Clone, Debug)]
 pub enum Object {
     Integer(i32),
@@ -12,6 +14,16 @@ impl Object {
             Self::Boolean(b) => b.to_string(),
             Self::Null => "null".to_string(),
             _ => "not implemented yet".to_string(),
+        }
+    }
+}
+
+impl fmt::Display for Object {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Integer(i) => write!(f, "{}", i.to_string()),
+            Self::Boolean(b) => write!(f, "{}", b.to_string()),
+            Self::Null => write!(f, "null"),
         }
     }
 }

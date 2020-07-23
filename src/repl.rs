@@ -1,3 +1,4 @@
+use crate::evaluator::*;
 use crate::lexer::*;
 use crate::parser::*;
 use std::io::{Stdin, Stdout};
@@ -13,7 +14,11 @@ pub fn start(input: Stdin, output: Stdout) {
         let mut parser = Parser::new(&mut l);
         let program = parser.parse_program();
         match program {
-            Ok(p) => println!("> {}", p),
+            Ok(p) => {
+                if let Ok(o) = eval(p) {
+                    println!("> {}", o);
+                }
+            }
             Err(e) => println!("> {}", e),
         }
     }

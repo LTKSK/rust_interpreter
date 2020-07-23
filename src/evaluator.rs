@@ -22,9 +22,33 @@ impl Error for EvalError {
     }
 }
 
+fn eval_bang_operator_expression(right: Object) -> Result<Object, EvalError> {
+    match right {
+        Object::Boolean(b) => match b {
+            true => Ok(Object::Boolean(false)),
+            false => Ok(Object::Boolean(true)),
+        },
+        Object::Null => Ok(Object::Boolean(true)),
+        // bool以外は全てtrulyな値として扱うので、返すのはfalse
+        _ => Ok(Object::Boolean(false)),
+    }
+}
+
+fn eval_prefix_expression(op: ast::PrefixOprator, right: Object) -> Result<Object, EvalError> {
+    match op {
+        ast::PrefixOprator::Bang => Ok(eval_bang_operator_expression(right)?),
+        _ => Ok(Object::Null),
+    }
+}
+
 fn eval_expression(expression: ast::Expression) -> Result<Object, EvalError> {
     match expression {
         ast::Expression::Integer(i) => Ok(Object::Integer(i)),
+        ast::Expression::Bool(b) => Ok(Object::Boolean(b)),
+        ast::Expression::Prefix { operator, right } => {
+            let right = eval_expression(right.as_ref().clone())?;
+            Ok(eval_prefix_expression(operator, right)?)
+        }
         s => Err(EvalError {
             msg: format!("Unexpected Expression {:?}", s),
         }),
@@ -40,7 +64,7 @@ fn eval_statement(statement: ast::Statement) -> Result<Object, EvalError> {
     }
 }
 
-fn eval(program: ast::Program) -> Result<Object, EvalError> {
+pub fn eval(program: ast::Program) -> Result<Object, EvalError> {
     let mut result = Object::Null;
     for stmt in program.statements {
         result = eval_statement(stmt)?;
@@ -62,6 +86,46 @@ mod test {
             match eval(program) {
                 Ok(o) => match o {
                     Object::Integer(i) => assert_eq!(i, expect),
+                    o => panic!("Error expect {} but got {:?}", expect, o),
+                },
+                Err(e) => panic!("{:?}", e),
+            }
+        }
+    }
+
+    #[test]
+    fn test_eval_boolean() {
+        let tests = vec![("true", true), ("false", false)];
+        for (input, expect) in tests {
+            let mut l = Lexer::new(input);
+            let mut p = Parser::new(&mut l);
+            let program = p.parse_program().unwrap();
+            match eval(program) {
+                Ok(o) => match o {
+                    Object::Boolean(b) => assert_eq!(b, expect),
+                    o => panic!("Error expect {} but got {:?}", expect, o),
+                },
+                Err(e) => panic!("{:?}", e),
+            }
+        }
+    }
+
+    #[test]
+    fn test_eval_bang_operator() {
+        let tests = vec![
+            ("!true", false),
+            ("!false", true),
+            ("!!true", true),
+            ("!!65", true),
+            ("!5", false),
+        ];
+        for (input, expect) in tests {
+            let mut l = Lexer::new(input);
+            let mut p = Parser::new(&mut l);
+            let program = p.parse_program().unwrap();
+            match eval(program) {
+                Ok(o) => match o {
+                    Object::Boolean(b) => assert_eq!(b, expect),
                     o => panic!("Error expect {} but got {:?}", expect, o),
                 },
                 Err(e) => panic!("{:?}", e),
