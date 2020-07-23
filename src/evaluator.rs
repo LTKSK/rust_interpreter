@@ -28,6 +28,7 @@ fn eval_prefix_bang_operator(right: Object) -> Result<Object, EvalError> {
             true => Ok(Object::Boolean(false)),
             false => Ok(Object::Boolean(true)),
         },
+        // NullはFalsyなのでひっくり返してtrue
         Object::Null => Ok(Object::Boolean(true)),
         // bool以外は全てtrulyな値として扱うので、返すのはfalse
         _ => Ok(Object::Boolean(false)),
@@ -45,7 +46,35 @@ fn eval_prefix_expression(op: ast::PrefixOprator, right: Object) -> Result<Objec
     match op {
         ast::PrefixOprator::Bang => Ok(eval_prefix_bang_operator(right)?),
         ast::PrefixOprator::Minus => Ok(eval_prefix_minus_operator(right)?),
-        _ => Ok(Object::Null),
+    }
+}
+
+fn eval_infix_expression(
+    op: ast::InfixOprator,
+    left: Object,
+    right: Object,
+) -> Result<Object, EvalError> {
+    match op {
+        ast::InfixOprator::Plus => match (left, right) {
+            (Object::Integer(l), Object::Integer(r)) => Ok(Object::Integer(l + r)),
+            _ => Ok(Object::Null),
+        },
+        ast::InfixOprator::Minus => match (left, right) {
+            (Object::Integer(l), Object::Integer(r)) => Ok(Object::Integer(l - r)),
+            _ => Ok(Object::Null),
+        },
+        ast::InfixOprator::Asterisk => match (left, right) {
+            (Object::Integer(l), Object::Integer(r)) => Ok(Object::Integer(l * r)),
+            _ => Ok(Object::Null),
+        },
+        ast::InfixOprator::Slash => match (left, right) {
+            (Object::Integer(l), Object::Integer(r)) => Ok(Object::Integer(l / r)),
+            _ => Ok(Object::Null),
+        },
+        o => panic!(
+            "eval infix expression for {:?} is not unimplemented yet.",
+            o
+        ),
     }
 }
 
@@ -56,6 +85,15 @@ fn eval_expression(expression: ast::Expression) -> Result<Object, EvalError> {
         ast::Expression::Prefix { operator, right } => {
             let right = eval_expression(right.as_ref().clone())?;
             Ok(eval_prefix_expression(operator, right)?)
+        }
+        ast::Expression::Infix {
+            left,
+            operator,
+            right,
+        } => {
+            let left = eval_expression(left.as_ref().clone())?;
+            let right = eval_expression(right.as_ref().clone())?;
+            Ok(eval_infix_expression(operator, left, right)?)
         }
         s => Err(EvalError {
             msg: format!("Unexpected Expression {:?}", s),
@@ -86,7 +124,19 @@ mod test {
 
     #[test]
     fn test_eval_integer() {
-        let tests = vec![("5", 5), ("10", 10), ("-10", -10)];
+        let tests = vec![
+            ("5", 5),
+            ("10", 10),
+            ("-10", -10),
+            ("5+5+5+5-10", 10),
+            ("2 * 2* 2*2*2", 32),
+            ("-50 + 100 + -50", 0),
+            ("5*2 + 10", 20),
+            ("5+2 * 10", 25),
+            ("50 / 2 * 2 + 10", 60),
+            ("2 * (5+10)", 30),
+            ("3 + (5+10) * 2", 33),
+        ];
         for (input, expect) in tests {
             let mut l = Lexer::new(input);
             let mut p = Parser::new(&mut l);
