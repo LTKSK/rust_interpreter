@@ -170,7 +170,6 @@ impl<'a> Parser<'a> {
             Token::NEQ => ast::InfixOprator::Nequal,
             Token::LPAREN => {
                 return Ok(self.parse_call_expression(left))?;
-                //ast::InfixOprator::Lparen,
             }
             _ => return Ok(left),
         };
@@ -619,7 +618,7 @@ mod test {
                     consequence,
                     alternative,
                 } => {
-                    assert_eq!(format!("{}", condition.as_ref()), "x < y");
+                    assert_eq!(format!("{}", condition.as_ref()), "(x < y)");
                     assert_eq!(format!("{}", consequence.as_ref()), "x");
                     if let Some(a) = alternative {
                         assert_eq!(format!("{}", a.as_ref()), "y");
@@ -650,7 +649,7 @@ mod test {
                     consequence,
                     alternative,
                 } => {
-                    assert_eq!(format!("{}", condition.as_ref()), "x < y");
+                    assert_eq!(format!("{}", condition.as_ref()), "(x < y)");
                     assert_eq!(format!("{}", consequence.as_ref()), "x");
                     if let Some(a) = alternative {
                         assert_eq!(format!("{}", a.as_ref()), "y");
@@ -679,7 +678,7 @@ mod test {
                 ast::Expression::Function { parameters, body } => {
                     assert_eq!(format!("{}", parameters[0]), "x");
                     assert_eq!(format!("{}", parameters[1]), "y");
-                    assert_eq!(format!("{}", body), "x + y");
+                    assert_eq!(format!("{}", body), "(x + y)");
                 }
                 e => panic!(format!("Invalid Function Expression {:?}", e)),
             },
@@ -706,10 +705,10 @@ mod test {
                     arguments,
                 } => {
                     assert_eq!(format!("{}", arguments[0]), "1");
-                    assert_eq!(format!("{}", arguments[1]), "2 * 3");
-                    assert_eq!(format!("{}", arguments[2]), "4 + 5");
+                    assert_eq!(format!("{}", arguments[1]), "(2 * 3)");
+                    assert_eq!(format!("{}", arguments[2]), "(4 + 5)");
                     assert_eq!(format!("{}", function), "add");
-                    assert_eq!(format!("{}", e), "add(1, 2 * 3, 4 + 5)")
+                    assert_eq!(format!("{}", e), "add(1, (2 * 3), (4 + 5))");
                 }
                 e => panic!(format!("Invalid Function Expression {:?}", e)),
             },

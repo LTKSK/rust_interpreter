@@ -3,8 +3,8 @@ use crate::parser::*;
 use std::io::{Stdin, Stdout};
 
 pub fn start(input: Stdin, output: Stdout) {
-    let mut s = String::new();
     loop {
+        let mut s = String::new();
         input.read_line(&mut s).ok();
         if s == "exit".to_string() {
             break;
