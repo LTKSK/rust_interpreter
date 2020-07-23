@@ -29,12 +29,13 @@ impl Precedence {
 }
 
 #[derive(Debug)]
-struct ParseError {
+pub struct ParseError {
     msg: String,
 }
+
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str("ParseError!")
+        write!(f, "ParseError: {}", self.msg)
     }
 }
 impl Error for ParseError {
@@ -44,7 +45,7 @@ impl Error for ParseError {
 }
 
 #[derive(Debug)]
-struct Parser<'a> {
+pub struct Parser<'a> {
     lexer: &'a mut Lexer<'a>,
     current_token: Token,
     peek_token: Token,
@@ -263,9 +264,8 @@ impl<'a> Parser<'a> {
         identifiers.push(identifier);
 
         while self.peek_token_is(Token::COMMA) {
-            // camma消費
+            // camma消費。次のtokenをcurrentにする
             self.next_token();
-            // cammaの次のtokenをcurrentにする
             self.next_token();
 
             let identifier = match self.current_token.clone() {
@@ -352,7 +352,7 @@ impl<'a> Parser<'a> {
         Ok(ast::Statement::Expression(expression))
     }
 
-    pub fn parse_statement(&mut self) -> Result<ast::Statement, ParseError> {
+    fn parse_statement(&mut self) -> Result<ast::Statement, ParseError> {
         match &self.current_token {
             Token::LET => Ok(self.parse_let_statement()?),
             Token::RETURN => Ok(self.parse_return_statement()?),

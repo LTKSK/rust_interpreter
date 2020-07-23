@@ -84,7 +84,7 @@ impl fmt::Display for Expression {
                 left,
                 operator,
                 right,
-            } => write!(f, "{} {} {}", left, operator, right),
+            } => write!(f, "({} {} {})", left, operator, right),
             Self::Call {
                 function,
                 arguments,
@@ -115,6 +115,15 @@ pub enum Statement {
     Return(Expression),
     Expression(Expression),
     Block(Vec<Statement>),
+}
+
+impl fmt::Display for Program {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for stmt in &self.statements {
+            write!(f, "{}", stmt);
+        }
+        Ok(())
+    }
 }
 
 impl fmt::Display for Statement {

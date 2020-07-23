@@ -1,5 +1,5 @@
 use crate::lexer::*;
-use crate::token::Token;
+use crate::parser::*;
 use std::io::{Stdin, Stdout};
 
 pub fn start(input: Stdin, output: Stdout) {
@@ -10,12 +10,11 @@ pub fn start(input: Stdin, output: Stdout) {
             break;
         }
         let mut l = Lexer::new(&s);
-        loop {
-            let t = l.next_token();
-            if t == Token::EOF {
-                break;
-            }
-            println!("{:?}", t);
+        let mut parser = Parser::new(&mut l);
+        let program = parser.parse_program();
+        match program {
+            Ok(p) => println!("> {}", p),
+            Err(e) => println!("> {}", e),
         }
     }
 }
