@@ -144,6 +144,7 @@ fn eval_statement(statement: ast::Statement) -> Result<Object, EvalError> {
     match statement {
         ast::Statement::Expression(e) => Ok(eval_expression(e)?),
         ast::Statement::Block(statements) => Ok(eval_statements(statements)?),
+        ast::Statement::Return(e) => Ok(Object::Return(Box::new(eval_expression(e)?))),
         s => Err(EvalError {
             msg: format!("Unexpected Statement {:?}", s),
         }),
@@ -154,6 +155,9 @@ fn eval_statements(statements: Vec<ast::Statement>) -> Result<Object, EvalError>
     let mut result = Object::Null;
     for stmt in statements {
         result = eval_statement(stmt)?;
+        if let Object::Return(o) = result {
+            return Ok(o.as_ref().clone());
+        }
     }
     Ok(result)
 }
@@ -269,6 +273,27 @@ mod test {
                     // Nullが返る分岐は-1をexpectとして入れておいて判定
                     // 数字は何でも良いんだけど、とりあえずこれで
                     Object::Null => assert_eq!(-1, expect),
+                    _ => panic!("Error expect {} but got {:?}", expect, o),
+                },
+                Err(e) => panic!("{:?}", e),
+            }
+        }
+    }
+
+    #[test]
+    fn test_eval_return_expressions() {
+        let tests = vec![
+            ("return 10;9;", 10),
+            ("return 2 * 5;", 10),
+            ("9; return 5;", 5),
+        ];
+        for (input, expect) in tests {
+            let mut l = Lexer::new(input);
+            let mut p = Parser::new(&mut l);
+            let program = p.parse_program().unwrap();
+            match eval(program) {
+                Ok(o) => match o {
+                    Object::Integer(i) => assert_eq!(i, expect),
                     _ => panic!("Error expect {} but got {:?}", expect, o),
                 },
                 Err(e) => panic!("{:?}", e),

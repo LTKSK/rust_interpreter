@@ -4,6 +4,7 @@ use std::fmt;
 pub enum Object {
     Integer(i32),
     Boolean(bool),
+    Return(Box<Object>),
     Null,
 }
 
@@ -23,6 +24,7 @@ impl fmt::Display for Object {
         match self {
             Self::Integer(i) => write!(f, "{}", i.to_string()),
             Self::Boolean(b) => write!(f, "{}", b.to_string()),
+            Self::Return(v) => write!(f, "{}", v.as_ref()),
             Self::Null => write!(f, "null"),
         }
     }
