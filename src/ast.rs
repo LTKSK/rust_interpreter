@@ -10,7 +10,7 @@ impl fmt::Display for PrefixOprator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Minus => write!(f, "-"),
-            Self::Bang => write!(f, "+"),
+            Self::Bang => write!(f, "!"),
         }
     }
 }

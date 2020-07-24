@@ -71,6 +71,22 @@ fn eval_infix_expression(
             (Object::Integer(l), Object::Integer(r)) => Ok(Object::Integer(l / r)),
             _ => Ok(Object::Null),
         },
+        ast::InfixOprator::Gt => match (left, right) {
+            (Object::Integer(l), Object::Integer(r)) => Ok(Object::Boolean(l > r)),
+            _ => Ok(Object::Null),
+        },
+        ast::InfixOprator::Lt => match (left, right) {
+            (Object::Integer(l), Object::Integer(r)) => Ok(Object::Boolean(l < r)),
+            _ => Ok(Object::Null),
+        },
+        ast::InfixOprator::Equal => match (left, right) {
+            (Object::Integer(l), Object::Integer(r)) => Ok(Object::Boolean(l == r)),
+            _ => Ok(Object::Null),
+        },
+        ast::InfixOprator::Nequal => match (left, right) {
+            (Object::Integer(l), Object::Integer(r)) => Ok(Object::Boolean(l != r)),
+            _ => Ok(Object::Null),
+        },
         o => panic!(
             "eval infix expression for {:?} is not unimplemented yet.",
             o
@@ -176,6 +192,14 @@ mod test {
             ("!!true", true),
             ("!!65", true),
             ("!5", false),
+            ("1 < 2", true),
+            ("1 > 2", false),
+            ("1 > 1", false),
+            ("1 < 1", false),
+            ("1 == 1", true),
+            ("1 != 1", false),
+            ("1 == 11", false),
+            ("1 != 11", true),
         ];
         for (input, expect) in tests {
             let mut l = Lexer::new(input);
