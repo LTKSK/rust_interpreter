@@ -81,10 +81,12 @@ fn eval_infix_expression(
         },
         ast::InfixOprator::Equal => match (left, right) {
             (Object::Integer(l), Object::Integer(r)) => Ok(Object::Boolean(l == r)),
+            (Object::Boolean(l), Object::Boolean(r)) => Ok(Object::Boolean(l == r)),
             _ => Ok(Object::Null),
         },
         ast::InfixOprator::Nequal => match (left, right) {
             (Object::Integer(l), Object::Integer(r)) => Ok(Object::Boolean(l != r)),
+            (Object::Boolean(l), Object::Boolean(r)) => Ok(Object::Boolean(l != r)),
             _ => Ok(Object::Null),
         },
         o => panic!(
@@ -200,6 +202,14 @@ mod test {
             ("1 != 1", false),
             ("1 == 11", false),
             ("1 != 11", true),
+            ("true == true", true),
+            ("false == false", true),
+            ("false == true", false),
+            ("false != true", true),
+            ("true != false", true),
+            ("(1<2) == false", false),
+            ("(1>2) == false", true),
+            ("(1>2) == true", false),
         ];
         for (input, expect) in tests {
             let mut l = Lexer::new(input);
