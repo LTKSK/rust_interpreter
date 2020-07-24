@@ -30,7 +30,7 @@ fn eval_prefix_bang_operator(right: Object) -> Result<Object, EvalError> {
         },
         // NullはFalsyなのでひっくり返してtrue
         Object::Null => Ok(Object::Boolean(true)),
-        // bool以外は全てtrulyな値として扱うので、返すのはfalse
+        // bool以外は全てtruthyな値として扱うので、返すのはfalse
         _ => Ok(Object::Boolean(false)),
     }
 }
@@ -113,6 +113,27 @@ fn eval_expression(expression: ast::Expression) -> Result<Object, EvalError> {
             let right = eval_expression(right.as_ref().clone())?;
             Ok(eval_infix_expression(operator, left, right)?)
         }
+        ast::Expression::If {
+            condition,
+            consequence,
+            alternative,
+        } => match eval_expression(condition.as_ref().clone())? {
+            Object::Boolean(b) => {
+                if b {
+                    eval_statement(consequence.as_ref().clone())
+                } else {
+                    match alternative {
+                        Some(a) => eval_statement(a.as_ref().clone()),
+                        None => Ok(Object::Null),
+                    }
+                }
+            }
+            c => {
+                return Err(EvalError {
+                    msg: format!("If condition must be boolean, but got {:?}", c),
+                })
+            }
+        },
         s => Err(EvalError {
             msg: format!("Unexpected Expression {:?}", s),
         }),
@@ -122,18 +143,23 @@ fn eval_expression(expression: ast::Expression) -> Result<Object, EvalError> {
 fn eval_statement(statement: ast::Statement) -> Result<Object, EvalError> {
     match statement {
         ast::Statement::Expression(e) => Ok(eval_expression(e)?),
+        ast::Statement::Block(statements) => Ok(eval_statements(statements)?),
         s => Err(EvalError {
             msg: format!("Unexpected Statement {:?}", s),
         }),
     }
 }
 
-pub fn eval(program: ast::Program) -> Result<Object, EvalError> {
+fn eval_statements(statements: Vec<ast::Statement>) -> Result<Object, EvalError> {
     let mut result = Object::Null;
-    for stmt in program.statements {
+    for stmt in statements {
         result = eval_statement(stmt)?;
     }
     Ok(result)
+}
+
+pub fn eval(program: ast::Program) -> Result<Object, EvalError> {
+    Ok(eval_statements(program.statements)?)
 }
 
 #[cfg(test)]
@@ -219,6 +245,31 @@ mod test {
                 Ok(o) => match o {
                     Object::Boolean(b) => assert_eq!(b, expect),
                     o => panic!("Error expect {} but got {:?}", expect, o),
+                },
+                Err(e) => panic!("{:?}", e),
+            }
+        }
+    }
+
+    #[test]
+    fn test_eval_ifelse_expressions() {
+        let tests = vec![
+            ("if(true){10}", 10),
+            ("if(false){10} else {20}", 20),
+            ("if(false){10}", -1),
+            ("if(1 > 0){10}", 10),
+        ];
+        for (input, expect) in tests {
+            let mut l = Lexer::new(input);
+            let mut p = Parser::new(&mut l);
+            let program = p.parse_program().unwrap();
+            match eval(program) {
+                Ok(o) => match o {
+                    Object::Integer(i) => assert_eq!(i, expect),
+                    // Nullが返る分岐は-1をexpectとして入れておいて判定
+                    // 数字は何でも良いんだけど、とりあえずこれで
+                    Object::Null => assert_eq!(-1, expect),
+                    _ => panic!("Error expect {} but got {:?}", expect, o),
                 },
                 Err(e) => panic!("{:?}", e),
             }
