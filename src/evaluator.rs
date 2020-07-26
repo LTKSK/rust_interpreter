@@ -38,7 +38,9 @@ fn eval_prefix_bang_operator(right: Object) -> Result<Object, EvalError> {
 fn eval_prefix_minus_operator(right: Object) -> Result<Object, EvalError> {
     match right {
         Object::Integer(i) => Ok(Object::Integer(-i)),
-        _ => Ok(Object::Null),
+        _ => Err(EvalError {
+            msg: "Invalid prefix expression".to_string(),
+        }),
     }
 }
 
@@ -57,42 +59,53 @@ fn eval_infix_expression(
     match op {
         ast::InfixOprator::Plus => match (left, right) {
             (Object::Integer(l), Object::Integer(r)) => Ok(Object::Integer(l + r)),
-            _ => Ok(Object::Null),
+            _ => Err(EvalError {
+                msg: "Invalid infix expression".to_string(),
+            }),
         },
         ast::InfixOprator::Minus => match (left, right) {
             (Object::Integer(l), Object::Integer(r)) => Ok(Object::Integer(l - r)),
-            _ => Ok(Object::Null),
+            _ => Err(EvalError {
+                msg: "Invalid infix expression".to_string(),
+            }),
         },
         ast::InfixOprator::Asterisk => match (left, right) {
             (Object::Integer(l), Object::Integer(r)) => Ok(Object::Integer(l * r)),
-            _ => Ok(Object::Null),
+            _ => Err(EvalError {
+                msg: "Invalid infix expression".to_string(),
+            }),
         },
         ast::InfixOprator::Slash => match (left, right) {
             (Object::Integer(l), Object::Integer(r)) => Ok(Object::Integer(l / r)),
-            _ => Ok(Object::Null),
+            _ => Err(EvalError {
+                msg: "Invalid infix expression".to_string(),
+            }),
         },
         ast::InfixOprator::Gt => match (left, right) {
             (Object::Integer(l), Object::Integer(r)) => Ok(Object::Boolean(l > r)),
-            _ => Ok(Object::Null),
+            _ => Err(EvalError {
+                msg: "Invalid infix expression".to_string(),
+            }),
         },
         ast::InfixOprator::Lt => match (left, right) {
             (Object::Integer(l), Object::Integer(r)) => Ok(Object::Boolean(l < r)),
-            _ => Ok(Object::Null),
+            _ => Err(EvalError {
+                msg: "Invalid infix expression".to_string(),
+            }),
         },
         ast::InfixOprator::Equal => match (left, right) {
             (Object::Integer(l), Object::Integer(r)) => Ok(Object::Boolean(l == r)),
             (Object::Boolean(l), Object::Boolean(r)) => Ok(Object::Boolean(l == r)),
-            _ => Ok(Object::Null),
+            _ => Err(EvalError {
+                msg: "Invalid infix expression".to_string(),
+            }),
         },
         ast::InfixOprator::Nequal => match (left, right) {
             (Object::Integer(l), Object::Integer(r)) => Ok(Object::Boolean(l != r)),
             (Object::Boolean(l), Object::Boolean(r)) => Ok(Object::Boolean(l != r)),
             _ => Ok(Object::Null),
         },
-        o => panic!(
-            "eval infix expression for {:?} is not unimplemented yet.",
-            o
-        ),
+        o => panic!("eval infix expression for {:?} is not implemented yet.", o),
     }
 }
 
@@ -309,6 +322,33 @@ mod test {
                     _ => panic!("Error expect {} but got {:?}", expect, o),
                 },
                 Err(e) => panic!("{:?}", e),
+            }
+        }
+    }
+
+    #[test]
+    fn test_error_handling() {
+        let tests = vec![
+            ("5 + true", "EvalError: Invalid infix expression"),
+            ("5 + true; 5", "EvalError: Invalid infix expression"),
+            ("-true", "EvalError: Invalid prefix expression"),
+            ("true+false", "EvalError: Invalid infix expression"),
+            (
+                "if(10>1){true + false;}",
+                "EvalError: Invalid infix expression",
+            ),
+            (
+                "if(10>1){if(10>1){true + false;} return 1; }",
+                "EvalError: Invalid infix expression",
+            ),
+        ];
+        for (input, expect) in tests {
+            let mut l = Lexer::new(input);
+            let mut p = Parser::new(&mut l);
+            let program = p.parse_program().unwrap();
+            match eval(program) {
+                Ok(_) => panic!("expect error '{}'", expect),
+                Err(e) => assert_eq!(format!("{}", e), expect),
             }
         }
     }
