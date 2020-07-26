@@ -140,10 +140,21 @@ fn eval_expression(expression: ast::Expression) -> Result<Object, EvalError> {
     }
 }
 
+fn eval_block_statements(statements: Vec<ast::Statement>) -> Result<Object, EvalError> {
+    let mut result = Object::Null;
+    for stmt in statements {
+        result = eval_statement(stmt)?;
+        if let Object::Return(_) = &result {
+            return Ok(result);
+        }
+    }
+    Ok(result)
+}
+
 fn eval_statement(statement: ast::Statement) -> Result<Object, EvalError> {
     match statement {
         ast::Statement::Expression(e) => Ok(eval_expression(e)?),
-        ast::Statement::Block(statements) => Ok(eval_statements(statements)?),
+        ast::Statement::Block(statements) => Ok(eval_block_statements(statements)?),
         ast::Statement::Return(e) => Ok(Object::Return(Box::new(eval_expression(e)?))),
         s => Err(EvalError {
             msg: format!("Unexpected Statement {:?}", s),
@@ -286,6 +297,7 @@ mod test {
             ("return 10;9;", 10),
             ("return 2 * 5;", 10),
             ("9; return 5;", 5),
+            ("if (true){ if (true) { return 10; } return 1;}", 10),
         ];
         for (input, expect) in tests {
             let mut l = Lexer::new(input);
