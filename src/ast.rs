@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Hash)]
 pub enum PrefixOprator {
     Minus,
     Bang,
@@ -15,7 +15,7 @@ impl fmt::Display for PrefixOprator {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Hash)]
 pub enum InfixOprator {
     Plus,
     Minus,
@@ -44,7 +44,7 @@ impl fmt::Display for InfixOprator {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Hash)]
 pub enum Expression {
     Identifier(String),
     Integer(i32),
@@ -103,12 +103,12 @@ impl fmt::Display for Expression {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Hash)]
 pub struct Program {
     pub statements: Vec<Statement>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Hash)]
 pub enum Statement {
     // nameが変数名で、valueが=の右辺
     Let { name: String, value: Expression },

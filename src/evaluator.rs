@@ -1,8 +1,6 @@
 use crate::ast;
 use crate::environment;
-use crate::lexer::Lexer;
 use crate::object::Object;
-use crate::parser::Parser;
 use std::error::Error;
 use std::fmt;
 
@@ -220,6 +218,8 @@ pub fn eval(
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::lexer::Lexer;
+    use crate::parser::Parser;
 
     #[test]
     fn test_eval_integer() {
