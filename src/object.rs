@@ -1,22 +1,11 @@
 use std::fmt;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Hash)]
 pub enum Object {
     Integer(i32),
     Boolean(bool),
     Return(Box<Object>),
     Null,
-}
-
-impl Object {
-    pub fn inspect(&self) -> String {
-        match self {
-            Self::Integer(i) => i.to_string(),
-            Self::Boolean(b) => b.to_string(),
-            Self::Null => "null".to_string(),
-            _ => "not implemented yet".to_string(),
-        }
-    }
 }
 
 impl fmt::Display for Object {

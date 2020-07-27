@@ -1,4 +1,5 @@
 use crate::ast;
+use crate::environment;
 use crate::lexer::Lexer;
 use crate::object::Object;
 use crate::parser::Parser;
@@ -109,12 +110,15 @@ fn eval_infix_expression(
     }
 }
 
-fn eval_expression(expression: ast::Expression) -> Result<Object, EvalError> {
+fn eval_expression(
+    expression: ast::Expression,
+    env: &mut environment::Environment,
+) -> Result<Object, EvalError> {
     match expression {
         ast::Expression::Integer(i) => Ok(Object::Integer(i)),
         ast::Expression::Bool(b) => Ok(Object::Boolean(b)),
         ast::Expression::Prefix { operator, right } => {
-            let right = eval_expression(right.as_ref().clone())?;
+            let right = eval_expression(right.as_ref().clone(), env)?;
             Ok(eval_prefix_expression(operator, right)?)
         }
         ast::Expression::Infix {
@@ -122,21 +126,21 @@ fn eval_expression(expression: ast::Expression) -> Result<Object, EvalError> {
             operator,
             right,
         } => {
-            let left = eval_expression(left.as_ref().clone())?;
-            let right = eval_expression(right.as_ref().clone())?;
+            let left = eval_expression(left.as_ref().clone(), env)?;
+            let right = eval_expression(right.as_ref().clone(), env)?;
             Ok(eval_infix_expression(operator, left, right)?)
         }
         ast::Expression::If {
             condition,
             consequence,
             alternative,
-        } => match eval_expression(condition.as_ref().clone())? {
+        } => match eval_expression(condition.as_ref().clone(), env)? {
             Object::Boolean(b) => {
                 if b {
-                    eval_statement(consequence.as_ref().clone())
+                    eval_statement(consequence.as_ref().clone(), env)
                 } else {
                     match alternative {
-                        Some(a) => eval_statement(a.as_ref().clone()),
+                        Some(a) => eval_statement(a.as_ref().clone(), env),
                         None => Ok(Object::Null),
                     }
                 }
@@ -147,16 +151,28 @@ fn eval_expression(expression: ast::Expression) -> Result<Object, EvalError> {
                 })
             }
         },
+        ast::Expression::Identifier(name) => {
+            if let Some(o) = env.get(&name) {
+                Ok(o.clone())
+            } else {
+                Err(EvalError {
+                    msg: format!("Undefined variable {}", name),
+                })
+            }
+        }
         s => Err(EvalError {
             msg: format!("Unexpected Expression {:?}", s),
         }),
     }
 }
 
-fn eval_block_statements(statements: Vec<ast::Statement>) -> Result<Object, EvalError> {
+fn eval_block_statements(
+    statements: Vec<ast::Statement>,
+    env: &mut environment::Environment,
+) -> Result<Object, EvalError> {
     let mut result = Object::Null;
     for stmt in statements {
-        result = eval_statement(stmt)?;
+        result = eval_statement(stmt, env)?;
         if let Object::Return(_) = &result {
             return Ok(result);
         }
@@ -164,21 +180,29 @@ fn eval_block_statements(statements: Vec<ast::Statement>) -> Result<Object, Eval
     Ok(result)
 }
 
-fn eval_statement(statement: ast::Statement) -> Result<Object, EvalError> {
+fn eval_statement(
+    statement: ast::Statement,
+    env: &mut environment::Environment,
+) -> Result<Object, EvalError> {
     match statement {
-        ast::Statement::Expression(e) => Ok(eval_expression(e)?),
-        ast::Statement::Block(statements) => Ok(eval_block_statements(statements)?),
-        ast::Statement::Return(e) => Ok(Object::Return(Box::new(eval_expression(e)?))),
-        s => Err(EvalError {
-            msg: format!("Unexpected Statement {:?}", s),
-        }),
+        ast::Statement::Expression(e) => Ok(eval_expression(e, env)?),
+        ast::Statement::Block(statements) => Ok(eval_block_statements(statements, env)?),
+        ast::Statement::Return(e) => Ok(Object::Return(Box::new(eval_expression(e, env)?))),
+        ast::Statement::Let { name, value } => {
+            let val = eval_expression(value, env)?;
+            env.set(name, val.clone());
+            Ok(val)
+        }
     }
 }
 
-fn eval_statements(statements: Vec<ast::Statement>) -> Result<Object, EvalError> {
+fn eval_statements(
+    statements: Vec<ast::Statement>,
+    env: &mut environment::Environment,
+) -> Result<Object, EvalError> {
     let mut result = Object::Null;
     for stmt in statements {
-        result = eval_statement(stmt)?;
+        result = eval_statement(stmt, env)?;
         if let Object::Return(o) = result {
             return Ok(o.as_ref().clone());
         }
@@ -186,8 +210,11 @@ fn eval_statements(statements: Vec<ast::Statement>) -> Result<Object, EvalError>
     Ok(result)
 }
 
-pub fn eval(program: ast::Program) -> Result<Object, EvalError> {
-    Ok(eval_statements(program.statements)?)
+pub fn eval(
+    program: ast::Program,
+    env: &mut environment::Environment,
+) -> Result<Object, EvalError> {
+    Ok(eval_statements(program.statements, env)?)
 }
 
 #[cfg(test)]
@@ -213,7 +240,8 @@ mod test {
             let mut l = Lexer::new(input);
             let mut p = Parser::new(&mut l);
             let program = p.parse_program().unwrap();
-            match eval(program) {
+            let mut env = environment::Environment::new();
+            match eval(program, &mut env) {
                 Ok(o) => match o {
                     Object::Integer(i) => assert_eq!(i, expect),
                     o => panic!("Error expect {} but got {:?}", expect, o),
@@ -230,7 +258,8 @@ mod test {
             let mut l = Lexer::new(input);
             let mut p = Parser::new(&mut l);
             let program = p.parse_program().unwrap();
-            match eval(program) {
+            let mut env = environment::Environment::new();
+            match eval(program, &mut env) {
                 Ok(o) => match o {
                     Object::Boolean(b) => assert_eq!(b, expect),
                     o => panic!("Error expect {} but got {:?}", expect, o),
@@ -269,7 +298,8 @@ mod test {
             let mut l = Lexer::new(input);
             let mut p = Parser::new(&mut l);
             let program = p.parse_program().unwrap();
-            match eval(program) {
+            let mut env = environment::Environment::new();
+            match eval(program, &mut env) {
                 Ok(o) => match o {
                     Object::Boolean(b) => assert_eq!(b, expect),
                     o => panic!("Error expect {} but got {:?}", expect, o),
@@ -291,7 +321,8 @@ mod test {
             let mut l = Lexer::new(input);
             let mut p = Parser::new(&mut l);
             let program = p.parse_program().unwrap();
-            match eval(program) {
+            let mut env = environment::Environment::new();
+            match eval(program, &mut env) {
                 Ok(o) => match o {
                     Object::Integer(i) => assert_eq!(i, expect),
                     // Nullが返る分岐は-1をexpectとして入れておいて判定
@@ -316,7 +347,8 @@ mod test {
             let mut l = Lexer::new(input);
             let mut p = Parser::new(&mut l);
             let program = p.parse_program().unwrap();
-            match eval(program) {
+            let mut env = environment::Environment::new();
+            match eval(program, &mut env) {
                 Ok(o) => match o {
                     Object::Integer(i) => assert_eq!(i, expect),
                     _ => panic!("Error expect {} but got {:?}", expect, o),
@@ -346,7 +378,8 @@ mod test {
             let mut l = Lexer::new(input);
             let mut p = Parser::new(&mut l);
             let program = p.parse_program().unwrap();
-            match eval(program) {
+            let mut env = environment::Environment::new();
+            match eval(program, &mut env) {
                 Ok(_) => panic!("expect error '{}'", expect),
                 Err(e) => assert_eq!(format!("{}", e), expect),
             }

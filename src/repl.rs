@@ -1,9 +1,11 @@
+use crate::environment::Environment;
 use crate::evaluator::*;
 use crate::lexer::*;
 use crate::parser::*;
 use std::io::{Stdin, Stdout};
 
 pub fn start(input: Stdin, output: Stdout) {
+    let mut env = Environment::new();
     loop {
         let mut s = String::new();
         input.read_line(&mut s).ok();
@@ -15,7 +17,7 @@ pub fn start(input: Stdin, output: Stdout) {
         let program = parser.parse_program();
         match program {
             Ok(p) => {
-                if let Ok(o) = eval(p) {
+                if let Ok(o) = eval(p, &mut env) {
                     println!("> {}", o);
                 }
             }
