@@ -22,7 +22,13 @@ impl Environment {
     }
 
     pub fn get(&self, name: &String) -> Option<&Object> {
-        self.store.get(name)
+        match self.store.get(name) {
+            Some(v) => Some(v),
+            None => match &self.outer {
+                Some(e) => e.get(name),
+                None => None,
+            },
+        }
     }
 
     pub fn set(&mut self, name: String, value: Object) {

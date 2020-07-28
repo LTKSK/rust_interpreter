@@ -110,6 +110,7 @@ fn eval_infix_expression(
     }
 }
 
+// parametersをkeyとしてargsで渡されたObjectをenv登録
 fn extend_function_env(
     parameters: Vec<ast::Expression>,
     env: &environment::Environment,
@@ -131,7 +132,7 @@ fn apply_function(function: Object, args: Vec<Object>) -> Result<Object, EvalErr
         env,
     } = function
     {
-        // ここでenv拡張して実行して～をやる
+        // parametersとargsの対応付け。関数の引数にあるparamsにargsのobjを対応させる
         let mut extended_env = extend_function_env(parameters, &env, args);
         let evaluated = eval_statement(body.as_ref().clone(), &mut extended_env)?;
         match evaluated {
@@ -298,6 +299,7 @@ mod test {
             ("2 * (5+10)", 30),
             ("3 + (5+10) * 2", 33),
         ];
+
         for (input, expect) in tests {
             let mut l = Lexer::new(input);
             let mut p = Parser::new(&mut l);
@@ -444,6 +446,30 @@ mod test {
             match eval(program, &mut env) {
                 Ok(_) => panic!("expect error '{}'", expect),
                 Err(e) => assert_eq!(format!("{}", e), expect),
+            }
+        }
+    }
+
+    #[test]
+    fn test_call() {
+        let tests = vec![
+            ("let a = fn(b,c) {return b + c;}; a(10, 20)", 30),
+            (
+                "let f = fn(a){ fn(b){a+b};}; let c = f(10); let d = c(20);",
+                30,
+            ),
+        ];
+        for (input, expect) in tests {
+            let mut l = Lexer::new(input);
+            let mut p = Parser::new(&mut l);
+            let program = p.parse_program().unwrap();
+            let mut env = environment::Environment::new();
+            match eval(program, &mut env) {
+                Ok(o) => match o {
+                    Object::Integer(i) => assert_eq!(i, expect),
+                    _ => panic!("Error expect {} but got {:?}", expect, o),
+                },
+                Err(e) => panic!("{:?}", e),
             }
         }
     }
