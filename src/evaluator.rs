@@ -102,10 +102,59 @@ fn eval_infix_expression(
         ast::InfixOprator::Nequal => match (left, right) {
             (Object::Integer(l), Object::Integer(r)) => Ok(Object::Boolean(l != r)),
             (Object::Boolean(l), Object::Boolean(r)) => Ok(Object::Boolean(l != r)),
-            _ => Ok(Object::Null),
+            _ => Err(EvalError {
+                msg: "Invalid infix expression".to_string(),
+            }),
         },
         o => panic!("eval infix expression for {:?} is not implemented yet.", o),
     }
+}
+
+fn extend_function_env(
+    parameters: Vec<ast::Expression>,
+    env: &environment::Environment,
+    args: Vec<Object>,
+) -> environment::Environment {
+    let mut env = environment::Environment::new_enclosed(env);
+    for (p, arg) in parameters.iter().zip(args) {
+        if let ast::Expression::Identifier(i) = p {
+            env.set(i.to_string(), arg)
+        }
+    }
+    env
+}
+
+fn apply_function(function: Object, args: Vec<Object>) -> Result<Object, EvalError> {
+    if let Object::Function {
+        parameters,
+        body,
+        env,
+    } = function
+    {
+        // ここでenv拡張して実行して～をやる
+        let mut extended_env = extend_function_env(parameters, &env, args);
+        let evaluated = eval_statement(body.as_ref().clone(), &mut extended_env)?;
+        match evaluated {
+            Object::Return(o) => Ok(o.as_ref().clone()),
+            _ => Ok(evaluated),
+        }
+    } else {
+        Err(EvalError {
+            msg: format!("{:?} Can not be called", function),
+        })
+    }
+}
+
+fn eval_expressions(
+    expressions: Vec<ast::Expression>,
+    env: &mut environment::Environment,
+) -> Result<Vec<Object>, EvalError> {
+    let mut result = vec![];
+    for e in expressions {
+        let evaluated = eval_expression(e, env)?;
+        result.push(evaluated);
+    }
+    Ok(result)
 }
 
 fn eval_expression(
@@ -158,6 +207,19 @@ fn eval_expression(
                 })
             }
         }
+        ast::Expression::Call {
+            function,
+            arguments,
+        } => {
+            let args = eval_expressions(arguments, env)?;
+            let function = eval_expression(function.as_ref().clone(), env)?;
+            Ok(apply_function(function, args)?)
+        }
+        ast::Expression::Function { parameters, body } => Ok(Object::Function {
+            parameters,
+            body,
+            env: env.clone(),
+        }),
         s => Err(EvalError {
             msg: format!("Unexpected Expression {:?}", s),
         }),

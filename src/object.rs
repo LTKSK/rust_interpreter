@@ -1,7 +1,8 @@
 use crate::ast::{Expression, Statement};
+use crate::environment::Environment;
 use std::fmt;
 
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Object {
     Integer(i32),
     Boolean(bool),
@@ -9,6 +10,7 @@ pub enum Object {
     Function {
         parameters: Vec<Expression>,
         body: Box<Statement>,
+        env: Environment,
     },
     Null,
 }
@@ -20,6 +22,7 @@ impl fmt::Display for Object {
             Self::Boolean(b) => write!(f, "{}", b.to_string()),
             Self::Return(v) => write!(f, "{}", v.as_ref()),
             Self::Null => write!(f, "null"),
+            Self::Function { .. } => write!(f, ""),
             _ => write!(f, "not implemented yet"),
         }
     }
