@@ -7,6 +7,7 @@ pub enum Token {
     // identifiers
     IDENT(String),
     INT(i32),
+    STRING(String),
     // operators
     ASSIGN,
     PLUS,
@@ -42,6 +43,7 @@ impl fmt::Display for Token {
             Token::EOF => "EOF".to_string(),
             Token::IDENT(s) => s.to_string(),
             Token::INT(i) => format!("{}", i),
+            Token::STRING(s) => format!("{}", s),
             Token::ASSIGN => "ASSIGN".to_string(),
             Token::PLUS => "PLUS".to_string(),
             Token::MINUS => "MINUS".to_string(),
