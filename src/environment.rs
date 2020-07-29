@@ -18,14 +18,14 @@ impl Environment {
     pub fn new_enclosed(outer: &Environment) -> Self {
         let mut env = Self::new();
         env.outer = Some(Box::new(outer.clone()));
-        return env;
+        env
     }
 
     pub fn get(&self, name: &String) -> Option<&Object> {
         match self.store.get(name) {
             Some(v) => Some(v),
             None => match &self.outer {
-                Some(e) => e.get(name),
+                Some(o) => o.get(name),
                 None => None,
             },
         }
