@@ -49,6 +49,7 @@ pub enum Expression {
     Identifier(String),
     Integer(i32),
     Bool(bool),
+    String(String),
     Prefix {
         operator: PrefixOprator,
         right: Box<Expression>,
@@ -78,6 +79,7 @@ impl fmt::Display for Expression {
         match self {
             Self::Identifier(i) => write!(f, "{}", &i),
             Self::Integer(i) => write!(f, "{}", i),
+            Self::String(s) => write!(f, "{}", s),
             Self::Bool(b) => write!(f, "{}", b),
             Self::Prefix { operator, right } => write!(f, "{}{}", operator, right),
             Self::Infix {

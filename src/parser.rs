@@ -309,6 +309,7 @@ impl<'a> Parser<'a> {
         match self.current_token.clone() {
             Token::IDENT(ident) => Ok(ast::Expression::Identifier(ident)),
             Token::INT(i) => Ok(ast::Expression::Integer(i)),
+            Token::STRING(s) => Ok(ast::Expression::String(s)),
             Token::TRUE => Ok(ast::Expression::Bool(true)),
             Token::FALSE => Ok(ast::Expression::Bool(false)),
             Token::IF => self.parse_if_expression(),
@@ -711,6 +712,25 @@ mod test {
                     assert_eq!(format!("{}", e), "add(1, (2 * 3), (4 + 5))");
                 }
                 e => panic!(format!("Invalid Function Expression {:?}", e)),
+            },
+            e => panic!(format!("expect `Expression` but got {:?}", e),),
+        };
+    }
+
+    #[test]
+    fn test_parse_string() {
+        let input = r#""hello world""#;
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program().unwrap();
+        assert_eq!(program.statements.len(), 1);
+        let stmt = &program.statements[0];
+        match stmt {
+            ast::Statement::Expression(e) => match e {
+                ast::Expression::String(s) => {
+                    assert_eq!(format!("{}", s), "hello world");
+                }
+                e => panic!(format!("Invalid String Expression {:?}", e)),
             },
             e => panic!(format!("expect `Expression` but got {:?}", e),),
         };

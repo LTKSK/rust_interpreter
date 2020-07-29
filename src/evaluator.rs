@@ -165,6 +165,7 @@ fn eval_expression(
     match expression {
         ast::Expression::Integer(i) => Ok(Object::Integer(i)),
         ast::Expression::Bool(b) => Ok(Object::Boolean(b)),
+        ast::Expression::String(s) => Ok(Object::String(s)),
         ast::Expression::Prefix { operator, right } => {
             let right = eval_expression(right.as_ref().clone(), env)?;
             Ok(eval_prefix_expression(operator, right)?)
