@@ -2,7 +2,6 @@ use crate::ast;
 use crate::builtins;
 use crate::environment;
 use crate::object::Object;
-use std::error::Error;
 use std::fmt;
 
 #[derive(Debug)]
@@ -13,12 +12,6 @@ pub struct EvalError {
 impl fmt::Display for EvalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "EvalError: {}", self.msg)
-    }
-}
-
-impl Error for EvalError {
-    fn description(&self) -> &str {
-        "Eval失敗"
     }
 }
 
@@ -177,7 +170,7 @@ fn eval_expression(
         ast::Expression::String(s) => Ok(Object::String(s)),
         ast::Expression::Prefix { operator, right } => {
             let right = eval_expression(right.as_ref().clone(), env)?;
-            Ok(eval_prefix_expression(operator, right)?)
+            eval_prefix_expression(operator, right)
         }
         ast::Expression::Infix {
             left,
@@ -186,7 +179,7 @@ fn eval_expression(
         } => {
             let left = eval_expression(left.as_ref().clone(), env)?;
             let right = eval_expression(right.as_ref().clone(), env)?;
-            Ok(eval_infix_expression(operator, left, right)?)
+            eval_infix_expression(operator, left, right)
         }
         ast::Expression::If {
             condition,
@@ -229,15 +222,12 @@ fn eval_expression(
         } => {
             let args = eval_expressions(arguments, env)?;
             let function = eval_expression(function.as_ref().clone(), env)?;
-            Ok(apply_function(function, args)?)
+            apply_function(function, args)
         }
         ast::Expression::Function { parameters, body } => Ok(Object::Function {
             parameters,
             body,
             env: env.clone(),
-        }),
-        s => Err(EvalError {
-            msg: format!("Unexpected Expression {:?}", s),
         }),
     }
 }
@@ -261,8 +251,8 @@ fn eval_statement(
     env: &mut environment::Environment,
 ) -> Result<Object, EvalError> {
     match statement {
-        ast::Statement::Expression(e) => Ok(eval_expression(e, env)?),
-        ast::Statement::Block(statements) => Ok(eval_block_statements(statements, env)?),
+        ast::Statement::Expression(e) => eval_expression(e, env),
+        ast::Statement::Block(statements) => eval_block_statements(statements, env),
         ast::Statement::Return(e) => Ok(Object::Return(Box::new(eval_expression(e, env)?))),
         ast::Statement::Let { name, value } => {
             let val = eval_expression(value, env)?;
@@ -290,7 +280,7 @@ pub fn eval(
     program: ast::Program,
     env: &mut environment::Environment,
 ) -> Result<Object, EvalError> {
-    Ok(eval_statements(program.statements, env)?)
+    eval_statements(program.statements, env)
 }
 
 #[cfg(test)]

@@ -1,9 +1,16 @@
 use crate::object::Object;
 use std::collections::HashMap;
+use std::fmt;
 
 #[derive(Debug)]
 pub struct BuiltinError {
     pub msg: String,
+}
+
+impl fmt::Display for BuiltinError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "BuiltinError: {}", self.msg)
+    }
 }
 
 fn len(args: Vec<Object>) -> Result<Object, BuiltinError> {

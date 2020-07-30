@@ -9,19 +9,17 @@ pub fn start(input: Stdin, output: Stdout) {
     loop {
         let mut s = String::new();
         input.read_line(&mut s).ok();
-        if s == "exit".to_string() {
-            break;
-        }
         let mut l = Lexer::new(&s);
         let mut parser = Parser::new(&mut l);
         let program = parser.parse_program();
         match program {
-            Ok(p) => {
-                if let Ok(o) = eval(p, &mut env) {
-                    println!("> {}", o);
-                }
+            Ok(p) => match eval(p, &mut env) {
+                Ok(result) => println!("> {}", result),
+                Err(e) => println!("> {}", e),
+            },
+            Err(e) => {
+                println!("> {}", e);
             }
-            Err(e) => println!("> {}", e),
         }
     }
 }
