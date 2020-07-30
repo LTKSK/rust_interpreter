@@ -58,6 +58,7 @@ fn eval_infix_expression(
     match op {
         ast::InfixOprator::Plus => match (left, right) {
             (Object::Integer(l), Object::Integer(r)) => Ok(Object::Integer(l + r)),
+            (Object::String(l), Object::String(r)) => Ok(Object::String(l + &r)),
             _ => Err(EvalError {
                 msg: "Invalid infix expression".to_string(),
             }),
@@ -95,6 +96,7 @@ fn eval_infix_expression(
         ast::InfixOprator::Equal => match (left, right) {
             (Object::Integer(l), Object::Integer(r)) => Ok(Object::Boolean(l == r)),
             (Object::Boolean(l), Object::Boolean(r)) => Ok(Object::Boolean(l == r)),
+            (Object::String(l), Object::String(r)) => Ok(Object::Boolean(l == r)),
             _ => Err(EvalError {
                 msg: "Invalid infix expression".to_string(),
             }),
@@ -102,6 +104,7 @@ fn eval_infix_expression(
         ast::InfixOprator::Nequal => match (left, right) {
             (Object::Integer(l), Object::Integer(r)) => Ok(Object::Boolean(l != r)),
             (Object::Boolean(l), Object::Boolean(r)) => Ok(Object::Boolean(l != r)),
+            (Object::String(l), Object::String(r)) => Ok(Object::Boolean(l != r)),
             _ => Err(EvalError {
                 msg: "Invalid infix expression".to_string(),
             }),
