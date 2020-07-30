@@ -122,7 +122,7 @@ pub enum Statement {
 impl fmt::Display for Program {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for stmt in &self.statements {
-            write!(f, "{}", stmt);
+            write!(f, "{}", stmt).unwrap();
         }
         Ok(())
     }

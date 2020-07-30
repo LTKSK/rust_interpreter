@@ -1,4 +1,5 @@
 use crate::ast::{Expression, Statement};
+use crate::builtins::BuiltinError;
 use crate::environment::Environment;
 use std::fmt;
 
@@ -13,6 +14,7 @@ pub enum Object {
         body: Box<Statement>,
         env: Environment,
     },
+    Builtin(fn(Vec<Object>) -> Result<Object, BuiltinError>),
     Null,
 }
 
@@ -25,6 +27,7 @@ impl fmt::Display for Object {
             Self::Return(v) => write!(f, "{}", v.as_ref()),
             Self::Null => write!(f, "null"),
             Self::Function { .. } => write!(f, ""),
+            Self::Builtin(_) => write!(f, "builtin function"),
         }
     }
 }

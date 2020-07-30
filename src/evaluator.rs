@@ -1,4 +1,5 @@
 use crate::ast;
+use crate::builtins;
 use crate::environment;
 use crate::object::Object;
 use std::error::Error;
@@ -129,23 +130,28 @@ fn extend_function_env(
 }
 
 fn apply_function(function: Object, args: Vec<Object>) -> Result<Object, EvalError> {
-    if let Object::Function {
-        parameters,
-        body,
-        env,
-    } = function
-    {
-        // parametersとargsの対応付け。関数の引数にあるparamsにargsのobjを対応させる
-        let mut extended_env = extend_function_env(parameters, &env, args);
-        let evaluated = eval_statement(body.as_ref().clone(), &mut extended_env)?;
-        match evaluated {
-            Object::Return(o) => Ok(o.as_ref().clone()),
-            _ => Ok(evaluated),
+    match function {
+        Object::Function {
+            parameters,
+            body,
+            env,
+        } => {
+            // parametersとargsの対応付け。関数の引数にあるparamsにargsのobjを対応させる
+            let mut extended_env = extend_function_env(parameters, &env, args);
+            let evaluated = eval_statement(body.as_ref().clone(), &mut extended_env)?;
+            match evaluated {
+                Object::Return(o) => Ok(o.as_ref().clone()),
+                _ => Ok(evaluated),
+            }
         }
-    } else {
-        Err(EvalError {
+        Object::Builtin(f) => match f(args) {
+            Ok(result) => Ok(result),
+            // Errorをenumにして表示側でmatchするとこんな変換をしなくてよくなる
+            Err(e) => Err(EvalError { msg: e.msg }),
+        },
+        _ => Err(EvalError {
             msg: format!("{:?} Can not be called", function),
-        })
+        }),
     }
 }
 
@@ -205,6 +211,11 @@ fn eval_expression(
         },
         ast::Expression::Identifier(name) => {
             if let Some(o) = env.get(&name) {
+                return Ok(o.clone());
+            }
+
+            // 都度生成は効率が悪い
+            if let Some(o) = builtins::new().get(&name) {
                 Ok(o.clone())
             } else {
                 Err(EvalError {
@@ -463,6 +474,24 @@ mod test {
                 30,
             ),
         ];
+        for (input, expect) in tests {
+            let mut l = Lexer::new(input);
+            let mut p = Parser::new(&mut l);
+            let program = p.parse_program().unwrap();
+            let mut env = environment::Environment::new();
+            match eval(program, &mut env) {
+                Ok(o) => match o {
+                    Object::Integer(i) => assert_eq!(i, expect),
+                    _ => panic!("Error expect {} but got {:?}", expect, o),
+                },
+                Err(e) => panic!("{:?}", e),
+            }
+        }
+    }
+
+    #[test]
+    fn test_builtin_function() {
+        let tests = vec![(r#"len("")"#, 0), (r#"len("four")"#, 4)];
         for (input, expect) in tests {
             let mut l = Lexer::new(input);
             let mut p = Parser::new(&mut l);
