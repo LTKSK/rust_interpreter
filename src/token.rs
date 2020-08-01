@@ -24,6 +24,8 @@ pub enum Token {
     RPAREN,
     LBRACE,
     RBRACE,
+    LBRACKET,
+    RBRACKET,
     // keywards
     FUNCTION,
     LET,
@@ -58,6 +60,8 @@ impl fmt::Display for Token {
             Token::RPAREN => "RPAREN".to_string(),
             Token::LBRACE => "LBRACE".to_string(),
             Token::RBRACE => "RBRACE".to_string(),
+            Token::LBRACKET => "LBRACKET".to_string(),
+            Token::RBRACKET => "RBRACKET".to_string(),
             Token::FUNCTION => "FUNCTION".to_string(),
             Token::LET => "LET".to_string(),
             Token::TRUE => "TRUE".to_string(),

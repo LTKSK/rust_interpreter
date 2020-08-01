@@ -107,6 +107,8 @@ impl<'a> Lexer<'a> {
             ')' => Token::RPAREN,
             '{' => Token::LBRACE,
             '}' => Token::RBRACE,
+            '[' => Token::LBRACKET,
+            ']' => Token::RBRACKET,
             '"' => {
                 self.read_char();
                 let mut ident = String::new();
@@ -181,6 +183,7 @@ mod tests {
             !=
             "foobar"
             "foo bar"
+            []
             "#;
         let mut lexer = Lexer::new(input);
         let tests = vec![
@@ -229,6 +232,8 @@ mod tests {
             Token::NEQ,
             Token::STRING("foobar".to_string()),
             Token::STRING("foo bar".to_string()),
+            Token::LBRACKET,
+            Token::RBRACKET,
             Token::EOF,
         ];
         for t in tests {

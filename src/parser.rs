@@ -55,7 +55,7 @@ pub struct Parser<'a> {
 impl<'a> Parser<'a> {
     pub fn new(lexer: &'a mut Lexer<'a>) -> Parser<'a> {
         let mut p = Parser {
-            lexer: lexer,
+            lexer,
             current_token: Token::ILLEGAL,
             peek_token: Token::ILLEGAL,
             errors: vec![],
@@ -305,6 +305,12 @@ impl<'a> Parser<'a> {
         })
     }
 
+    fn parse_array_expression(&mut self) -> Result<ast::Expression, ParseError> {
+        Err(ParseError {
+            msg: "".to_string(),
+        })
+    }
+
     fn parse_prefix(&mut self) -> Result<ast::Expression, ParseError> {
         match self.current_token.clone() {
             Token::IDENT(ident) => Ok(ast::Expression::Identifier(ident)),
@@ -322,6 +328,7 @@ impl<'a> Parser<'a> {
                 })
             }
             Token::LPAREN => self.parse_group_expression(),
+            Token::LBRACKET => self.parse_array_expression(),
             Token::BANG => {
                 self.next_token();
                 Ok(ast::Expression::Prefix {
@@ -729,6 +736,31 @@ mod test {
             ast::Statement::Expression(e) => match e {
                 ast::Expression::String(s) => {
                     assert_eq!(format!("{}", s), "hello world");
+                }
+                e => panic!(format!("Invalid String Expression {:?}", e)),
+            },
+            e => panic!(format!("expect `Expression` but got {:?}", e),),
+        };
+    }
+
+    #[test]
+    fn test_parse_array() {
+        let input = r#"[1, 2]"#;
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program().unwrap();
+        assert_eq!(program.statements.len(), 1);
+        let stmt = &program.statements[0];
+        match stmt {
+            ast::Statement::Expression(e) => match e {
+                ast::Expression::Array(array) => {
+                    for (expr, expect) in array.iter().zip(vec![1, 2]) {
+                        if let ast::Expression::Integer(i) = expr {
+                            assert_eq!(*i, expect);
+                        } else {
+                            panic!("unexpected expression {:?}", expr)
+                        }
+                    }
                 }
                 e => panic!(format!("Invalid String Expression {:?}", e)),
             },

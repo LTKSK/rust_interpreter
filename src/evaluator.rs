@@ -229,6 +229,7 @@ fn eval_expression(
             body,
             env: env.clone(),
         }),
+        _ => panic!("todo"),
     }
 }
 

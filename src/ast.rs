@@ -50,6 +50,7 @@ pub enum Expression {
     Integer(i32),
     Bool(bool),
     String(String),
+    Array(Vec<Expression>),
     Prefix {
         operator: PrefixOprator,
         right: Box<Expression>,
@@ -106,17 +107,17 @@ impl fmt::Display for Expression {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Hash)]
-pub struct Program {
-    pub statements: Vec<Statement>,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Hash)]
 pub enum Statement {
     // nameが変数名で、valueが=の右辺
     Let { name: String, value: Expression },
     Return(Expression),
     Expression(Expression),
     Block(Vec<Statement>),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Hash)]
+pub struct Program {
+    pub statements: Vec<Statement>,
 }
 
 impl fmt::Display for Program {
