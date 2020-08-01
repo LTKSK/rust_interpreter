@@ -73,6 +73,10 @@ pub enum Expression {
         function: Box<Expression>,
         arguments: Vec<Expression>,
     },
+    Index {
+        left: Box<Expression>,
+        index: Box<Expression>,
+    },
 }
 
 impl fmt::Display for Expression {
@@ -101,6 +105,7 @@ impl fmt::Display for Expression {
                     .collect::<Vec<_>>()
                     .join(", ")
             ),
+            Self::Index { left, index } => write!(f, "{}[{}]", left, index),
             _ => write!(f, "todo exp"),
         }
     }
@@ -137,7 +142,7 @@ impl fmt::Display for Statement {
             Self::Expression(e) => write!(f, "{}", e),
             Self::Block(stmts) => {
                 for s in stmts.iter() {
-                    write!(f, "{}", s);
+                    write!(f, "{}", s).unwrap();
                 }
                 Ok(())
             }

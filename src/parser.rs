@@ -13,6 +13,7 @@ enum Precedence {
     Product,     // * /
     Prefix,      // -X or !X
     Call,        // myFunction(X)
+    Index,       // array[index]
 }
 
 impl Precedence {
@@ -23,6 +24,7 @@ impl Precedence {
             Token::PLUS | Token::MINUS => Self::Sum,
             Token::SLASH | Token::ASTERISK => Self::Product,
             Token::LPAREN => Self::Call,
+            Token::LBRACKET => Self::Index,
             _ => Self::Lowest,
         }
     }
@@ -126,35 +128,30 @@ impl<'a> Parser<'a> {
         Ok(ast::Statement::Return(return_value))
     }
 
-    fn parse_call_arguments(&mut self) -> Result<Vec<ast::Expression>, ParseError> {
-        let mut arguments = vec![];
-        if self.peek_token_is(Token::RPAREN) {
-            self.next_token();
-            return Ok(arguments);
-        }
-        self.next_token();
-        arguments.push(self.parse_expression(Precedence::Lowest)?);
-        while self.peek_token_is(Token::COMMA) {
-            // カンマ消費してその次のtokenまで
-            self.next_token();
-            self.next_token();
-            arguments.push(self.parse_expression(Precedence::Lowest)?);
-        }
-        if !self.expect_peek(Token::RPAREN) {
-            return Err(ParseError {
-                msg: format!("Expect `)`, but got {:?}", self.peek_token),
-            });
-        }
-        Ok(arguments)
-    }
-
     fn parse_call_expression(
         &mut self,
         function: ast::Expression,
     ) -> Result<ast::Expression, ParseError> {
         Ok(ast::Expression::Call {
             function: Box::new(function),
-            arguments: self.parse_call_arguments()?,
+            arguments: self.parse_expressions(Token::RPAREN)?,
+        })
+    }
+
+    fn parse_index_expression(
+        &mut self,
+        left: ast::Expression,
+    ) -> Result<ast::Expression, ParseError> {
+        self.next_token();
+        let index = self.parse_expression(Precedence::Lowest)?;
+        if !self.expect_peek(Token::RBRACKET) {
+            return Err(ParseError {
+                msg: format!("Expect ], but got {:?}", self.peek_token),
+            });
+        }
+        Ok(ast::Expression::Index {
+            left: Box::new(left),
+            index: Box::new(index),
         })
     }
 
@@ -170,6 +167,9 @@ impl<'a> Parser<'a> {
             Token::NEQ => ast::InfixOprator::Nequal,
             Token::LPAREN => {
                 return Ok(self.parse_call_expression(left))?;
+            }
+            Token::LBRACKET => {
+                return Ok(self.parse_index_expression(left))?;
             }
             _ => return Ok(left),
         };
@@ -305,10 +305,31 @@ impl<'a> Parser<'a> {
         })
     }
 
+    fn parse_expressions(&mut self, token: Token) -> Result<Vec<ast::Expression>, ParseError> {
+        let mut expressions = vec![];
+        if self.peek_token_is(token.clone()) {
+            self.next_token();
+            return Ok(expressions);
+        }
+        self.next_token();
+        expressions.push(self.parse_expression(Precedence::Lowest)?);
+        while self.peek_token_is(Token::COMMA) {
+            // comma消費して次のtokenをみる
+            self.next_token();
+            self.next_token();
+            expressions.push(self.parse_expression(Precedence::Lowest)?);
+        }
+        if !self.expect_peek(token.clone()) {
+            return Err(ParseError {
+                msg: format!("Expect {} but got {}", token, self.peek_token),
+            });
+        }
+        Ok(expressions)
+    }
+
     fn parse_array_expression(&mut self) -> Result<ast::Expression, ParseError> {
-        Err(ParseError {
-            msg: "".to_string(),
-        })
+        let expressions = self.parse_expressions(Token::RBRACKET)?;
+        Ok(ast::Expression::Array(expressions))
     }
 
     fn parse_prefix(&mut self) -> Result<ast::Expression, ParseError> {
@@ -762,6 +783,22 @@ mod test {
                         }
                     }
                 }
+                e => panic!(format!("Invalid String Expression {:?}", e)),
+            },
+            e => panic!(format!("expect `Expression` but got {:?}", e),),
+        };
+    }
+
+    #[test]
+    fn test_parse_index() {
+        let input = "hoge[1+2];";
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program().unwrap();
+        let stmt = &program.statements[0];
+        match stmt {
+            ast::Statement::Expression(e) => match e {
+                ast::Expression::Index { .. } => assert_eq!(format!("{}", e), "hoge[(1 + 2)]"),
                 e => panic!(format!("Invalid String Expression {:?}", e)),
             },
             e => panic!(format!("expect `Expression` but got {:?}", e),),
