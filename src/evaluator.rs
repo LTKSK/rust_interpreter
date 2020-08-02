@@ -160,6 +160,19 @@ fn eval_expressions(
     Ok(result)
 }
 
+fn eval_index_expression(left: Object, index: Object) -> Result<Object, EvalError> {
+    match (left, index) {
+        // arrayとintegerのときのみ解決する
+        (Object::Array(arr), Object::Integer(i)) => match arr.get(i as usize) {
+            Some(value) => Ok(value.clone()),
+            None => Ok(Object::Null),
+        },
+        (l, i) => Err(EvalError {
+            msg: format!("Can not resolve {:?} and {:?}", l, i),
+        }),
+    }
+}
+
 fn eval_expression(
     expression: ast::Expression,
     env: &mut environment::Environment,
@@ -232,7 +245,11 @@ fn eval_expression(
             let elements = eval_expressions(arr, env)?;
             Ok(Object::Array(elements))
         }
-        _ => panic!("todo"),
+        ast::Expression::Index { left, index } => {
+            let l = eval_expression(left.as_ref().clone(), env)?;
+            let i = eval_expression(index.as_ref().clone(), env)?;
+            eval_index_expression(l, i)
+        } //_ => panic!("todo"),
     }
 }
 
@@ -516,6 +533,29 @@ mod test {
                 _ => panic!("Error expect array but got {:?}", o),
             },
             Err(e) => panic!("{:?}", e),
+        }
+    }
+
+    #[test]
+    fn test_array_index() {
+        let tests = vec![
+            ("[1,2*3,3][1]", 6),
+            ("[2,3,4][0]", 2),
+            ("[2,3,[0,5]][2][1]", 5),
+        ];
+
+        for (input, expect) in tests {
+            let mut l = Lexer::new(input);
+            let mut p = Parser::new(&mut l);
+            let program = p.parse_program().unwrap();
+            let mut env = environment::Environment::new();
+            match eval(program, &mut env) {
+                Ok(o) => match o {
+                    Object::Integer(i) => assert_eq!(i, expect),
+                    _ => panic!("Error expect array but got {:?}", o),
+                },
+                Err(e) => panic!("{:?}", e),
+            }
         }
     }
 }
