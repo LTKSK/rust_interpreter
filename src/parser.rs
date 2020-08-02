@@ -3,6 +3,7 @@ use crate::error::Error;
 use crate::error::Error::ParseError;
 use crate::lexer::Lexer;
 use crate::token::Token;
+use std::collections::BTreeMap;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd)]
 enum Precedence {
@@ -311,6 +312,34 @@ impl<'a> Parser<'a> {
         Ok(ast::Expression::Array(expressions))
     }
 
+    fn parse_map_expression(&mut self) -> Result<ast::Expression, Error> {
+        let mut m = BTreeMap::new();
+        while !self.peek_token_is(Token::RBRACE) {
+            self.next_token();
+            let key = self.parse_expression(Precedence::Lowest)?;
+            if !self.expect_peek(Token::COLON) {
+                return Err(ParseError {
+                    msg: format!("Expect `:` but got {}", self.peek_token),
+                });
+            }
+            self.next_token();
+            let value = self.parse_expression(Precedence::Lowest)?;
+            m.insert(Box::new(key), Box::new(value));
+            if !self.peek_token_is(Token::RBRACE) && !self.expect_peek(Token::COMMA) {
+                return Err(ParseError {
+                    msg: format!("Expect `}}` or `:` but got {}", self.peek_token),
+                });
+            }
+        }
+
+        if !self.expect_peek(Token::RBRACE) {
+            return Err(ParseError {
+                msg: format!("Expect `}}` but got {}", self.peek_token),
+            });
+        }
+        Ok(ast::Expression::Map(m))
+    }
+
     fn parse_prefix(&mut self) -> Result<ast::Expression, Error> {
         match self.current_token.clone() {
             Token::IDENT(ident) => Ok(ast::Expression::Identifier(ident)),
@@ -329,6 +358,7 @@ impl<'a> Parser<'a> {
             }
             Token::LPAREN => self.parse_group_expression(),
             Token::LBRACKET => self.parse_array_expression(),
+            Token::LBRACE => self.parse_map_expression(),
             Token::BANG => {
                 self.next_token();
                 Ok(ast::Expression::Prefix {
@@ -336,8 +366,8 @@ impl<'a> Parser<'a> {
                     right: Box::new(self.parse_expression(Precedence::Prefix)?),
                 })
             }
-            _ => Err(ParseError {
-                msg: "Unexpected Expression".to_string(),
+            t => Err(ParseError {
+                msg: format!("Unexpected Expression: {}", t),
             }),
         }
     }
@@ -778,6 +808,22 @@ mod test {
         match stmt {
             ast::Statement::Expression(e) => match e {
                 ast::Expression::Index { .. } => assert_eq!(format!("{}", e), "hoge[(1 + 2)]"),
+                e => panic!(format!("Invalid String Expression {:?}", e)),
+            },
+            e => panic!(format!("expect `Expression` but got {:?}", e),),
+        };
+    }
+
+    #[test]
+    fn test_parse_map() {
+        let input = r#"{"one":1, "two": 2}"#;
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program().unwrap_or_else(|e| panic!("{:?}", e));
+        let stmt = &program.statements[0];
+        match stmt {
+            ast::Statement::Expression(e) => match e {
+                ast::Expression::Map(_) => assert_eq!(format!("{}", e), "{ one: 1, two: 2 }"),
                 e => panic!(format!("Invalid String Expression {:?}", e)),
             },
             e => panic!(format!("expect `Expression` but got {:?}", e),),

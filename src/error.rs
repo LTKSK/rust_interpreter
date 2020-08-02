@@ -4,6 +4,7 @@ use std::fmt;
 pub enum Error {
     ParseError { msg: String },
     EvalError { msg: String },
+    BuiltinError { msg: String },
 }
 
 impl fmt::Display for Error {
@@ -11,6 +12,7 @@ impl fmt::Display for Error {
         match self {
             Self::ParseError { msg } => write!(f, "ParseError: {}", msg),
             Self::EvalError { msg } => write!(f, "EvalError: {}", msg),
+            Self::BuiltinError { msg } => write!(f, "BuiltinError: {}", msg),
         }
     }
 }

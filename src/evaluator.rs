@@ -3,7 +3,8 @@ use crate::builtins;
 use crate::environment;
 use crate::error::Error;
 use crate::error::Error::EvalError;
-use crate::object::Object;
+use crate::object::{MapKey, Object};
+use std::collections::HashMap;
 
 fn eval_prefix_bang_operator(right: Object) -> Result<Object, Error> {
     match right {
@@ -129,8 +130,7 @@ fn apply_function(function: Object, args: Vec<Object>) -> Result<Object, Error> 
         }
         Object::Builtin(f) => match f(args) {
             Ok(result) => Ok(result),
-            // Errorをenumにして表示側でmatchするとこんな変換をしなくてよくなる
-            Err(e) => Err(EvalError { msg: e.msg }),
+            Err(e) => Err(e),
         },
         _ => Err(EvalError {
             msg: format!("{:?} Can not be called", function),
@@ -155,6 +155,10 @@ fn eval_index_expression(left: Object, index: Object) -> Result<Object, Error> {
         // arrayとintegerのときのみ解決する
         (Object::Array(arr), Object::Integer(i)) => match arr.get(i as usize) {
             Some(value) => Ok(value.clone()),
+            None => Ok(Object::Null),
+        },
+        (Object::Map(m), obj) => match m.get(&MapKey::from(obj)) {
+            Some(value) => Ok(value.as_ref().clone()),
             None => Ok(Object::Null),
         },
         (l, i) => Err(EvalError {
@@ -209,7 +213,7 @@ fn eval_expression(
             if let Some(o) = env.get(&name) {
                 return Ok(o.clone());
             }
-            // TODO:都度生成は効率が悪いのでstaticにしたい...
+            // TODO:都度生成は効率が悪いのでstaticにするか、Rcあたりで持ち回したい
             if let Some(o) = builtins::new().get(&name) {
                 Ok(o.clone())
             } else {
@@ -239,7 +243,16 @@ fn eval_expression(
             let l = eval_expression(left.as_ref().clone(), env)?;
             let i = eval_expression(index.as_ref().clone(), env)?;
             eval_index_expression(l, i)
-        } //_ => panic!("todo"),
+        }
+        ast::Expression::Map(m) => {
+            let mut map = HashMap::new();
+            for (k, v) in m.iter() {
+                let key = eval_expression(k.as_ref().clone(), env)?;
+                let value = eval_expression(v.as_ref().clone(), env)?;
+                map.insert(MapKey::from(key), Box::new(value));
+            }
+            Ok(Object::Map(map))
+        }
     }
 }
 
@@ -540,6 +553,28 @@ mod test {
                 Ok(o) => match o {
                     Object::Integer(i) => assert_eq!(i, expect),
                     _ => panic!("Error expect array but got {:?}", o),
+                },
+                Err(e) => panic!("{:?}", e),
+            }
+        }
+    }
+
+    #[test]
+    fn test_map() {
+        let tests = vec![
+            ("let a = {1: 222}; a[1]", 222),
+            (r#"let b = {"aa": 345}; b["aa"];"#, 345),
+        ];
+
+        for (input, expect) in tests {
+            let mut l = Lexer::new(input);
+            let mut p = Parser::new(&mut l);
+            let program = p.parse_program().unwrap();
+            let mut env = environment::Environment::new();
+            match eval(program, &mut env) {
+                Ok(o) => match o {
+                    Object::Integer(i) => assert_eq!(i, expect),
+                    _ => panic!("Error expect `{}` but got {:?}", expect, o),
                 },
                 Err(e) => panic!("{:?}", e),
             }

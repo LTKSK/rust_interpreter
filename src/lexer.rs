@@ -102,6 +102,7 @@ impl<'a> Lexer<'a> {
             '<' => Token::LT,
             '>' => Token::GT,
             ',' => Token::COMMA,
+            ':' => Token::COLON,
             ';' => Token::SEMICOLON,
             '(' => Token::LPAREN,
             ')' => Token::RPAREN,
@@ -184,7 +185,9 @@ mod tests {
             "foobar"
             "foo bar"
             []
+            :
             "#;
+
         let mut lexer = Lexer::new(input);
         let tests = vec![
             Token::LET,
@@ -234,6 +237,7 @@ mod tests {
             Token::STRING("foo bar".to_string()),
             Token::LBRACKET,
             Token::RBRACKET,
+            Token::COLON,
             Token::EOF,
         ];
         for t in tests {

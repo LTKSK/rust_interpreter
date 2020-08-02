@@ -1,6 +1,7 @@
+use std::collections::BTreeMap;
 use std::fmt;
 
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum PrefixOprator {
     Minus,
     Bang,
@@ -15,7 +16,7 @@ impl fmt::Display for PrefixOprator {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum InfixOprator {
     Plus,
     Minus,
@@ -44,7 +45,7 @@ impl fmt::Display for InfixOprator {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum Expression {
     Identifier(String),
     Integer(i32),
@@ -77,6 +78,7 @@ pub enum Expression {
         left: Box<Expression>,
         index: Box<Expression>,
     },
+    Map(BTreeMap<Box<Expression>, Box<Expression>>),
 }
 
 impl fmt::Display for Expression {
@@ -106,12 +108,20 @@ impl fmt::Display for Expression {
                     .join(", ")
             ),
             Self::Index { left, index } => write!(f, "{}[{}]", left, index),
+            Self::Map(m) => write!(
+                f,
+                "{{ {} }}",
+                m.iter()
+                    .map(|(k, v)| { format!("{}: {}", k, v) })
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
             _ => write!(f, "todo exp"),
         }
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum Statement {
     // nameが変数名で、valueが=の右辺
     Let { name: String, value: Expression },

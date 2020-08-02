@@ -19,6 +19,7 @@ pub enum Token {
     BANG,
     //delimiters
     COMMA,
+    COLON,
     SEMICOLON,
     LPAREN,
     RPAREN,
@@ -55,6 +56,7 @@ impl fmt::Display for Token {
             Token::GT => "GT".to_string(),
             Token::BANG => "BANG".to_string(),
             Token::COMMA => "CAMMA".to_string(),
+            Token::COLON => "COLON".to_string(),
             Token::SEMICOLON => "SEMICOLON".to_string(),
             Token::LPAREN => "LPAREN".to_string(),
             Token::RPAREN => "RPAREN".to_string(),

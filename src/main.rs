@@ -1,4 +1,4 @@
-use std::io::{stdin, stdout};
+use std::io::stdin;
 mod ast;
 mod builtins;
 mod environment;
@@ -12,5 +12,5 @@ mod token;
 use repl::start;
 
 fn main() {
-    start(stdin(), stdout());
+    start(stdin());
 }

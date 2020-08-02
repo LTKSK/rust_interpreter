@@ -2,10 +2,11 @@ use crate::environment::Environment;
 use crate::evaluator::*;
 use crate::lexer::*;
 use crate::parser::*;
-use std::io::{Stdin, Stdout};
+use std::io::Stdin;
 
-pub fn start(input: Stdin, output: Stdout) {
+pub fn start(input: Stdin) {
     let mut env = Environment::new();
+    println!("> Hello!");
     loop {
         let mut s = String::new();
         input.read_line(&mut s).ok();
