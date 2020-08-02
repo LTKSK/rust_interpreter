@@ -206,8 +206,7 @@ fn eval_expression(
             if let Some(o) = env.get(&name) {
                 return Ok(o.clone());
             }
-
-            // 都度生成は効率が悪い
+            // TODO:都度生成は効率が悪いのでstaticにしたい...
             if let Some(o) = builtins::new().get(&name) {
                 Ok(o.clone())
             } else {
@@ -229,6 +228,10 @@ fn eval_expression(
             body,
             env: env.clone(),
         }),
+        ast::Expression::Array(arr) => {
+            let elements = eval_expressions(arr, env)?;
+            Ok(Object::Array(elements))
+        }
         _ => panic!("todo"),
     }
 }
@@ -495,6 +498,24 @@ mod test {
                 },
                 Err(e) => panic!("{:?}", e),
             }
+        }
+    }
+
+    #[test]
+    fn test_array() {
+        let mut l = Lexer::new("[1,2*2,3]");
+        let mut p = Parser::new(&mut l);
+        let program = p.parse_program().unwrap();
+        let mut env = environment::Environment::new();
+        match eval(program, &mut env) {
+            Ok(o) => match o {
+                Object::Array(a) => assert_eq!(
+                    a,
+                    vec![Object::Integer(1), Object::Integer(4), Object::Integer(3)]
+                ),
+                _ => panic!("Error expect array but got {:?}", o),
+            },
+            Err(e) => panic!("{:?}", e),
         }
     }
 }
