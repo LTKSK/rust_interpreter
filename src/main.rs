@@ -2,6 +2,7 @@ use std::io::{stdin, stdout};
 mod ast;
 mod builtins;
 mod environment;
+mod error;
 mod evaluator;
 mod lexer;
 mod object;

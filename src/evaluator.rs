@@ -1,21 +1,11 @@
 use crate::ast;
 use crate::builtins;
 use crate::environment;
+use crate::error::Error;
+use crate::error::Error::EvalError;
 use crate::object::Object;
-use std::fmt;
 
-#[derive(Debug)]
-pub struct EvalError {
-    msg: String,
-}
-
-impl fmt::Display for EvalError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "EvalError: {}", self.msg)
-    }
-}
-
-fn eval_prefix_bang_operator(right: Object) -> Result<Object, EvalError> {
+fn eval_prefix_bang_operator(right: Object) -> Result<Object, Error> {
     match right {
         Object::Boolean(b) => match b {
             true => Ok(Object::Boolean(false)),
@@ -28,7 +18,7 @@ fn eval_prefix_bang_operator(right: Object) -> Result<Object, EvalError> {
     }
 }
 
-fn eval_prefix_minus_operator(right: Object) -> Result<Object, EvalError> {
+fn eval_prefix_minus_operator(right: Object) -> Result<Object, Error> {
     match right {
         Object::Integer(i) => Ok(Object::Integer(-i)),
         _ => Err(EvalError {
@@ -37,7 +27,7 @@ fn eval_prefix_minus_operator(right: Object) -> Result<Object, EvalError> {
     }
 }
 
-fn eval_prefix_expression(op: ast::PrefixOprator, right: Object) -> Result<Object, EvalError> {
+fn eval_prefix_expression(op: ast::PrefixOprator, right: Object) -> Result<Object, Error> {
     match op {
         ast::PrefixOprator::Bang => Ok(eval_prefix_bang_operator(right)?),
         ast::PrefixOprator::Minus => Ok(eval_prefix_minus_operator(right)?),
@@ -48,7 +38,7 @@ fn eval_infix_expression(
     op: ast::InfixOprator,
     left: Object,
     right: Object,
-) -> Result<Object, EvalError> {
+) -> Result<Object, Error> {
     match op {
         ast::InfixOprator::Plus => match (left, right) {
             (Object::Integer(l), Object::Integer(r)) => Ok(Object::Integer(l + r)),
@@ -122,7 +112,7 @@ fn extend_function_env(
     env
 }
 
-fn apply_function(function: Object, args: Vec<Object>) -> Result<Object, EvalError> {
+fn apply_function(function: Object, args: Vec<Object>) -> Result<Object, Error> {
     match function {
         Object::Function {
             parameters,
@@ -151,7 +141,7 @@ fn apply_function(function: Object, args: Vec<Object>) -> Result<Object, EvalErr
 fn eval_expressions(
     expressions: Vec<ast::Expression>,
     env: &mut environment::Environment,
-) -> Result<Vec<Object>, EvalError> {
+) -> Result<Vec<Object>, Error> {
     let mut result = vec![];
     for e in expressions {
         let evaluated = eval_expression(e, env)?;
@@ -160,7 +150,7 @@ fn eval_expressions(
     Ok(result)
 }
 
-fn eval_index_expression(left: Object, index: Object) -> Result<Object, EvalError> {
+fn eval_index_expression(left: Object, index: Object) -> Result<Object, Error> {
     match (left, index) {
         // arrayとintegerのときのみ解決する
         (Object::Array(arr), Object::Integer(i)) => match arr.get(i as usize) {
@@ -176,7 +166,7 @@ fn eval_index_expression(left: Object, index: Object) -> Result<Object, EvalErro
 fn eval_expression(
     expression: ast::Expression,
     env: &mut environment::Environment,
-) -> Result<Object, EvalError> {
+) -> Result<Object, Error> {
     match expression {
         ast::Expression::Integer(i) => Ok(Object::Integer(i)),
         ast::Expression::Bool(b) => Ok(Object::Boolean(b)),
@@ -256,7 +246,7 @@ fn eval_expression(
 fn eval_block_statements(
     statements: Vec<ast::Statement>,
     env: &mut environment::Environment,
-) -> Result<Object, EvalError> {
+) -> Result<Object, Error> {
     let mut result = Object::Null;
     for stmt in statements {
         result = eval_statement(stmt, env)?;
@@ -270,7 +260,7 @@ fn eval_block_statements(
 fn eval_statement(
     statement: ast::Statement,
     env: &mut environment::Environment,
-) -> Result<Object, EvalError> {
+) -> Result<Object, Error> {
     match statement {
         ast::Statement::Expression(e) => eval_expression(e, env),
         ast::Statement::Block(statements) => eval_block_statements(statements, env),
@@ -286,7 +276,7 @@ fn eval_statement(
 fn eval_statements(
     statements: Vec<ast::Statement>,
     env: &mut environment::Environment,
-) -> Result<Object, EvalError> {
+) -> Result<Object, Error> {
     let mut result = Object::Null;
     for stmt in statements {
         result = eval_statement(stmt, env)?;
@@ -297,10 +287,7 @@ fn eval_statements(
     Ok(result)
 }
 
-pub fn eval(
-    program: ast::Program,
-    env: &mut environment::Environment,
-) -> Result<Object, EvalError> {
+pub fn eval(program: ast::Program, env: &mut environment::Environment) -> Result<Object, Error> {
     eval_statements(program.statements, env)
 }
 

@@ -1,8 +1,8 @@
 use crate::ast;
+use crate::error::Error;
+use crate::error::Error::ParseError;
 use crate::lexer::Lexer;
 use crate::token::Token;
-use std::error::Error;
-use std::fmt;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd)]
 enum Precedence {
@@ -31,27 +31,10 @@ impl Precedence {
 }
 
 #[derive(Debug)]
-pub struct ParseError {
-    msg: String,
-}
-
-impl fmt::Display for ParseError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ParseError: {}", self.msg)
-    }
-}
-impl Error for ParseError {
-    fn description(&self) -> &str {
-        "Parse失敗！"
-    }
-}
-
-#[derive(Debug)]
 pub struct Parser<'a> {
     lexer: &'a mut Lexer<'a>,
     current_token: Token,
     peek_token: Token,
-    errors: Vec<ParseError>,
 }
 
 impl<'a> Parser<'a> {
@@ -60,7 +43,6 @@ impl<'a> Parser<'a> {
             lexer,
             current_token: Token::ILLEGAL,
             peek_token: Token::ILLEGAL,
-            errors: vec![],
         };
         p.next_token();
         p.next_token();
@@ -92,7 +74,7 @@ impl<'a> Parser<'a> {
         return false;
     }
 
-    pub fn parse_let_statement(&mut self) -> Result<ast::Statement, ParseError> {
+    pub fn parse_let_statement(&mut self) -> Result<ast::Statement, Error> {
         self.next_token();
         let identifier = match self.current_token.clone() {
             Token::IDENT(ident) => ident,
@@ -119,7 +101,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    pub fn parse_return_statement(&mut self) -> Result<ast::Statement, ParseError> {
+    pub fn parse_return_statement(&mut self) -> Result<ast::Statement, Error> {
         self.next_token();
         let return_value = self.parse_expression(Precedence::Lowest)?;
         if self.peek_token_is(Token::SEMICOLON) {
@@ -131,17 +113,14 @@ impl<'a> Parser<'a> {
     fn parse_call_expression(
         &mut self,
         function: ast::Expression,
-    ) -> Result<ast::Expression, ParseError> {
+    ) -> Result<ast::Expression, Error> {
         Ok(ast::Expression::Call {
             function: Box::new(function),
             arguments: self.parse_expressions(Token::RPAREN)?,
         })
     }
 
-    fn parse_index_expression(
-        &mut self,
-        left: ast::Expression,
-    ) -> Result<ast::Expression, ParseError> {
+    fn parse_index_expression(&mut self, left: ast::Expression) -> Result<ast::Expression, Error> {
         self.next_token();
         let index = self.parse_expression(Precedence::Lowest)?;
         if !self.expect_peek(Token::RBRACKET) {
@@ -155,7 +134,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_infix(&mut self, left: ast::Expression) -> Result<ast::Expression, ParseError> {
+    fn parse_infix(&mut self, left: ast::Expression) -> Result<ast::Expression, Error> {
         let operator = match &self.current_token {
             Token::PLUS => ast::InfixOprator::Plus,
             Token::MINUS => ast::InfixOprator::Minus,
@@ -183,7 +162,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_group_expression(&mut self) -> Result<ast::Expression, ParseError> {
+    fn parse_group_expression(&mut self) -> Result<ast::Expression, Error> {
         // この時点ではparenが来てるので読みすすめる
         self.next_token();
         let expression = self.parse_expression(Precedence::Lowest)?;
@@ -195,7 +174,7 @@ impl<'a> Parser<'a> {
         Ok(expression)
     }
 
-    fn parse_block_statement(&mut self) -> Result<ast::Statement, ParseError> {
+    fn parse_block_statement(&mut self) -> Result<ast::Statement, Error> {
         self.next_token();
         let mut statements = vec![];
         while !self.current_token_is(Token::RBRACE) && !self.current_token_is(Token::EOF) {
@@ -206,7 +185,7 @@ impl<'a> Parser<'a> {
         Ok(ast::Statement::Block(statements))
     }
 
-    fn parse_if_expression(&mut self) -> Result<ast::Expression, ParseError> {
+    fn parse_if_expression(&mut self) -> Result<ast::Expression, Error> {
         if !self.expect_peek(Token::LPAREN) {
             return Err(ParseError {
                 msg: format!("Unexpected token {:?}. wanted LPAREN", self.peek_token),
@@ -245,7 +224,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_function_params(&mut self) -> Result<Vec<ast::Expression>, ParseError> {
+    fn parse_function_params(&mut self) -> Result<Vec<ast::Expression>, Error> {
         if self.peek_token_is(Token::RPAREN) {
             self.next_token();
             return Ok(vec![]);
@@ -286,7 +265,7 @@ impl<'a> Parser<'a> {
         Ok(identifiers)
     }
 
-    fn parse_function_expression(&mut self) -> Result<ast::Expression, ParseError> {
+    fn parse_function_expression(&mut self) -> Result<ast::Expression, Error> {
         if !self.expect_peek(Token::LPAREN) {
             return Err(ParseError {
                 msg: format!("Unexpected token {:?}. wanted `(`", self.peek_token),
@@ -305,7 +284,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_expressions(&mut self, token: Token) -> Result<Vec<ast::Expression>, ParseError> {
+    fn parse_expressions(&mut self, token: Token) -> Result<Vec<ast::Expression>, Error> {
         let mut expressions = vec![];
         if self.peek_token_is(token.clone()) {
             self.next_token();
@@ -327,12 +306,12 @@ impl<'a> Parser<'a> {
         Ok(expressions)
     }
 
-    fn parse_array_expression(&mut self) -> Result<ast::Expression, ParseError> {
+    fn parse_array_expression(&mut self) -> Result<ast::Expression, Error> {
         let expressions = self.parse_expressions(Token::RBRACKET)?;
         Ok(ast::Expression::Array(expressions))
     }
 
-    fn parse_prefix(&mut self) -> Result<ast::Expression, ParseError> {
+    fn parse_prefix(&mut self) -> Result<ast::Expression, Error> {
         match self.current_token.clone() {
             Token::IDENT(ident) => Ok(ast::Expression::Identifier(ident)),
             Token::INT(i) => Ok(ast::Expression::Integer(i)),
@@ -363,7 +342,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_expression(&mut self, precedence: Precedence) -> Result<ast::Expression, ParseError> {
+    fn parse_expression(&mut self, precedence: Precedence) -> Result<ast::Expression, Error> {
         let mut expression = self.parse_prefix()?;
         while !self.peek_token_is(Token::SEMICOLON) && precedence < self.peek_precedence() {
             self.next_token();
@@ -372,7 +351,7 @@ impl<'a> Parser<'a> {
         Ok(expression)
     }
 
-    fn parse_expression_statement(&mut self) -> Result<ast::Statement, ParseError> {
+    fn parse_expression_statement(&mut self) -> Result<ast::Statement, Error> {
         let expression = self.parse_expression(Precedence::Lowest)?;
         if self.peek_token_is(Token::SEMICOLON) {
             self.next_token();
@@ -380,7 +359,7 @@ impl<'a> Parser<'a> {
         Ok(ast::Statement::Expression(expression))
     }
 
-    fn parse_statement(&mut self) -> Result<ast::Statement, ParseError> {
+    fn parse_statement(&mut self) -> Result<ast::Statement, Error> {
         match &self.current_token {
             Token::LET => Ok(self.parse_let_statement()?),
             Token::RETURN => Ok(self.parse_return_statement()?),
@@ -388,7 +367,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse_program(&mut self) -> Result<ast::Program, ParseError> {
+    pub fn parse_program(&mut self) -> Result<ast::Program, Error> {
         let mut program = ast::Program { statements: vec![] };
         while !self.current_token_is(Token::EOF) {
             let statement = self.parse_statement()?;
