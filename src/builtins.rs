@@ -22,6 +22,7 @@ fn len(args: Vec<Object>) -> Result<Object, BuiltinError> {
 
     match &args[0] {
         Object::String(s) => Ok(Object::Integer(s.len() as i32)),
+        Object::Array(arr) => Ok(Object::Integer(arr.len() as i32)),
         _ => Err(BuiltinError {
             msg: "`len` support String only".to_string(),
         }),
