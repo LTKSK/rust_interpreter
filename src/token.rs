@@ -1,12 +1,13 @@
 use std::fmt;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Token {
     ILLEGAL,
     EOF,
     // identifiers
     IDENT(String),
     INT(i32),
+    FLOAT(f32),
     STRING(String),
     // operators
     ASSIGN,
@@ -46,6 +47,7 @@ impl fmt::Display for Token {
             Token::EOF => "EOF".to_string(),
             Token::IDENT(s) => s.to_string(),
             Token::INT(i) => format!("{}", i),
+            Token::FLOAT(f) => format!("{}", f),
             Token::STRING(s) => format!("{}", s),
             Token::ASSIGN => "ASSIGN".to_string(),
             Token::PLUS => "PLUS".to_string(),

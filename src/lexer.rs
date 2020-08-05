@@ -45,13 +45,25 @@ impl<'a> Lexer<'a> {
         '0' <= c && c <= '9'
     }
 
-    fn read_number(&mut self) -> String {
+    fn read_number(&mut self) -> Token {
         let mut ident = String::new();
+        let mut is_float = false;
         while Self::is_digit(self.current) {
             ident.push(self.current);
+            // 読み込みは一回だけ。それ以降は通さない
+            if self.next == '.' {
+                self.read_char();
+                is_float = true;
+                ident.push(self.current);
+            }
             self.read_char();
         }
-        ident
+
+        if is_float {
+            Token::FLOAT(ident.parse::<f32>().unwrap())
+        } else {
+            Token::INT(ident.parse::<i32>().unwrap())
+        }
     }
 
     fn read_identifier(&mut self) -> String {
@@ -125,8 +137,7 @@ impl<'a> Lexer<'a> {
                     let ident = self.read_identifier();
                     return self.token_from(&ident);
                 } else if Self::is_digit(c) {
-                    let ident = self.read_number();
-                    return Token::INT(ident.parse::<i32>().unwrap());
+                    return self.read_number();
                 } else {
                     return Token::ILLEGAL;
                 }
@@ -186,6 +197,7 @@ mod tests {
             "foo bar"
             []
             :
+            5.5;
             "#;
 
         let mut lexer = Lexer::new(input);
@@ -238,6 +250,8 @@ mod tests {
             Token::LBRACKET,
             Token::RBRACKET,
             Token::COLON,
+            Token::FLOAT(5.5),
+            Token::SEMICOLON,
             Token::EOF,
         ];
         for t in tests {
