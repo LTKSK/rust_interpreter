@@ -1,3 +1,4 @@
+use crate::builtins;
 use crate::object::*;
 use std::collections::HashMap;
 
@@ -5,6 +6,7 @@ use std::collections::HashMap;
 pub struct Environment {
     store: HashMap<String, Object>,
     outer: Option<Box<Environment>>,
+    builtins: HashMap<String, Object>,
 }
 
 impl Environment {
@@ -12,6 +14,7 @@ impl Environment {
         Self {
             store: HashMap::new(),
             outer: None,
+            builtins: builtins::new(),
         }
     }
 
@@ -26,7 +29,10 @@ impl Environment {
             Some(v) => Some(v),
             None => match &self.outer {
                 Some(o) => o.get(name),
-                None => None,
+                None => match &self.builtins.get(name) {
+                    Some(o) => Some(o),
+                    None => None,
+                },
             },
         }
     }

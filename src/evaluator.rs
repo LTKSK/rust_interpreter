@@ -1,5 +1,4 @@
 use crate::ast;
-use crate::builtins;
 use crate::environment;
 use crate::error::Error;
 use crate::error::Error::EvalError;
@@ -212,10 +211,6 @@ fn eval_expression(
         ast::Expression::Identifier(name) => {
             if let Some(o) = env.get(&name) {
                 return Ok(o.clone());
-            }
-            // TODO:都度生成は効率が悪いのでstaticにするか、Rcあたりで持ち回したい
-            if let Some(o) = builtins::new().get(&name) {
-                Ok(o.clone())
             } else {
                 Err(EvalError {
                     msg: format!("Undefined variable {}", name),
