@@ -248,6 +248,9 @@ fn eval_expression(
             }
             Ok(Object::Map(map))
         }
+        _ => Err(EvalError {
+            msg: "not implemented yet".to_string(),
+        }),
     }
 }
 

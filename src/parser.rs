@@ -829,4 +829,28 @@ mod test {
             e => panic!(format!("expect `Expression` but got {:?}", e),),
         };
     }
+
+    #[test]
+    fn test_parse_for() {
+        let input = r#" for a in [1,2,3] { a; }"#;
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program().unwrap_or_else(|e| panic!("{:?}", e));
+        let stmt = &program.statements[0];
+        match stmt {
+            ast::Statement::Expression(e) => match e {
+                ast::Expression::For {
+                    parameter,
+                    array,
+                    expressions,
+                } => {
+                    assert_eq!(format!("{}", parameter), "a");
+                    assert_eq!(format!("{}", array), "[1, 2, 3]");
+                    assert_eq!(format!("{}", expressions[0]), "a");
+                }
+                e => panic!(format!("Invalid String Expression {:?}", e)),
+            },
+            e => panic!(format!("expect `Expression` but got {:?}", e),),
+        };
+    }
 }

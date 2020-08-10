@@ -84,6 +84,8 @@ impl<'a> Lexer<'a> {
             "if" => Token::IF,
             "else" => Token::ELSE,
             "return" => Token::RETURN,
+            "for" => Token::FOR,
+            "in" => Token::IN,
             ident => Token::IDENT(ident.to_string()),
         }
     }
@@ -198,6 +200,8 @@ mod tests {
             []
             :
             5.5;
+            for 
+            in
             "#;
 
         let mut lexer = Lexer::new(input);
@@ -252,6 +256,8 @@ mod tests {
             Token::COLON,
             Token::FLOAT(5.5),
             Token::SEMICOLON,
+            Token::FOR,
+            Token::IN,
             Token::EOF,
         ];
         for t in tests {

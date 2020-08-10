@@ -78,6 +78,11 @@ pub enum Expression {
         left: Box<Expression>,
         index: Box<Expression>,
     },
+    For {
+        parameter: Box<Expression>,
+        array: Box<Expression>, //Expression::Array only
+        expressions: Vec<Expression>,
+    },
     Map(BTreeMap<Box<Expression>, Box<Expression>>),
 }
 
@@ -108,6 +113,21 @@ impl fmt::Display for Expression {
                     .join(", ")
             ),
             Self::Index { left, index } => write!(f, "{}[{}]", left, index),
+            Self::For {
+                parameter,
+                array,
+                expressions,
+            } => write!(
+                f,
+                "for {} in {} {{ {} }}",
+                parameter,
+                array,
+                expressions
+                    .iter()
+                    .map(|e| format!("{}", e))
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            ),
             Self::Map(m) => write!(
                 f,
                 "{{ {} }}",

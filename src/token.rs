@@ -38,6 +38,8 @@ pub enum Token {
     RETURN,
     EQ,
     NEQ,
+    FOR,
+    IN,
 }
 
 impl fmt::Display for Token {
@@ -75,6 +77,8 @@ impl fmt::Display for Token {
             Token::RETURN => "RETURN".to_string(),
             Token::EQ => "EQ".to_string(),
             Token::NEQ => "NEQ".to_string(),
+            Token::FOR => "FOR".to_string(),
+            Token::IN => "IN".to_string(),
         };
         write!(f, "{}", value)
     }
