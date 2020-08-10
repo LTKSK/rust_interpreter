@@ -340,6 +340,45 @@ impl<'a> Parser<'a> {
         Ok(ast::Expression::Map(m))
     }
 
+    fn parse_for_expression(&mut self) -> Result<ast::Expression, Error> {
+        // forの次に進む
+        self.next_token();
+        // identifierをparse
+        let parameter = match self.parse_expression(Precedence::Lowest)? {
+            ast::Expression::Identifier(i) => i,
+            o => {
+                return Err(Error::EvalError {
+                    msg: format!("Expect identifier but got {}", o),
+                })
+            }
+        };
+        // inを読み込み(なければエラー)
+        if !self.expect_peek(Token::IN) {
+            return Err(Error::EvalError {
+                msg: format!("Expect `in` but got {}", self.peek_token),
+            });
+        }
+        if !self.expect_peek(Token::LBRACKET) {
+            return Err(Error::EvalError {
+                msg: format!("Expect `[` but got {}", self.peek_token),
+            });
+        }
+        // arrayのparse
+        let array = self.parse_array_expression()?;
+        // {}内のparse
+        if !self.expect_peek(Token::LBRACE) {
+            return Err(Error::EvalError {
+                msg: format!("Expect `{{` but got {}", self.peek_token),
+            });
+        }
+        let statement = self.parse_block_statement()?;
+        Ok(ast::Expression::For {
+            parameter,
+            array: Box::new(array),
+            statement: Box::new(statement),
+        })
+    }
+
     fn parse_prefix(&mut self) -> Result<ast::Expression, Error> {
         match self.current_token.clone() {
             Token::IDENT(ident) => Ok(ast::Expression::Identifier(ident)),
@@ -366,6 +405,7 @@ impl<'a> Parser<'a> {
                     right: Box::new(self.parse_expression(Precedence::Prefix)?),
                 })
             }
+            Token::FOR => self.parse_for_expression(),
             t => Err(ParseError {
                 msg: format!("Unexpected Expression: {}", t),
             }),
@@ -842,11 +882,11 @@ mod test {
                 ast::Expression::For {
                     parameter,
                     array,
-                    expressions,
+                    statement,
                 } => {
                     assert_eq!(format!("{}", parameter), "a");
                     assert_eq!(format!("{}", array), "[1, 2, 3]");
-                    assert_eq!(format!("{}", expressions[0]), "a");
+                    assert_eq!(format!("{}", statement), "a");
                 }
                 e => panic!(format!("Invalid String Expression {:?}", e)),
             },
