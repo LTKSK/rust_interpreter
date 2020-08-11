@@ -112,6 +112,16 @@ fn extend_function_env(
     env
 }
 
+fn extend_for_env(
+    parameter: &str,
+    env: &environment::Environment,
+    arg: Object,
+) -> environment::Environment {
+    let mut env = environment::Environment::new_enclosed(env);
+    env.set(String::from(parameter), arg);
+    env
+}
+
 fn apply_function(function: Object, args: Vec<Object>) -> Result<Object, Error> {
     match function {
         Object::Function {
@@ -248,9 +258,23 @@ fn eval_expression(
             }
             Ok(Object::Map(map))
         }
-        _ => Err(EvalError {
-            msg: "not implemented yet".to_string(),
-        }),
+        ast::Expression::For {
+            parameter,
+            array,
+            statement,
+        } => {
+            let mut result = Object::Null;
+            // arrayの値を一つずつenv上のparameterにマッピング
+            if let ast::Expression::Array(array) = *array.clone() {
+                for object in eval_expressions(array, env)? {
+                    let mut env = extend_for_env(&parameter, env, object);
+                    if let ast::Statement::Block(stmts) = *statement.clone() {
+                        result = eval_block_statements(stmts, &mut env)?;
+                    }
+                }
+            }
+            Ok(result)
+        } //_ => Err(EvalError { msg: "not implemented yet".to_string(), }),
     }
 }
 
@@ -563,6 +587,25 @@ mod test {
             ("let a = {1: 222}; a[1]", 222),
             (r#"let b = {"aa": 345}; b["aa"];"#, 345),
         ];
+
+        for (input, expect) in tests {
+            let mut l = Lexer::new(input);
+            let mut p = Parser::new(&mut l);
+            let program = p.parse_program().unwrap();
+            let mut env = environment::Environment::new();
+            match eval(program, &mut env) {
+                Ok(o) => match o {
+                    Object::Integer(i) => assert_eq!(i, expect),
+                    _ => panic!("Error expect `{}` but got {:?}", expect, o),
+                },
+                Err(e) => panic!("{:?}", e),
+            }
+        }
+    }
+
+    #[test]
+    fn test_for() {
+        let tests = vec![("let a = 0; for b in [1,2,3] { let a = a + b }", 3)];
 
         for (input, expect) in tests {
             let mut l = Lexer::new(input);

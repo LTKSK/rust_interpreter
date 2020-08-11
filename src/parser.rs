@@ -888,7 +888,7 @@ mod test {
                     assert_eq!(format!("{}", array), "[1, 2, 3]");
                     assert_eq!(format!("{}", statement), "a");
                 }
-                e => panic!(format!("Invalid String Expression {:?}", e)),
+                e => panic!(format!("Invalid For Expression {:?}", e)),
             },
             e => panic!(format!("expect `Expression` but got {:?}", e),),
         };
