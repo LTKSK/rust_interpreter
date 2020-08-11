@@ -192,11 +192,26 @@ fn eval_expression(
             left,
             operator,
             right,
-        } => {
-            let left = eval_expression(left.as_ref().clone(), env)?;
-            let right = eval_expression(right.as_ref().clone(), env)?;
-            eval_infix_expression(operator, left, right)
-        }
+        } => match operator {
+            ast::InfixOprator::Assign => match *left {
+                // Assignのoperatorの時だけ分岐を分ける
+                // eval_infixだと既にObjectになってしまっていて、
+                // Identifierのnameが取れないため
+                ast::Expression::Identifier(i) => {
+                    let right = eval_expression(right.as_ref().clone(), env)?;
+                    env.set(i, right.clone());
+                    Ok(right)
+                }
+                _ => Err(Error::EvalError {
+                    msg: format!("can not assign {} to {}", right, left),
+                }),
+            },
+            _ => {
+                let left = eval_expression(left.as_ref().clone(), env)?;
+                let right = eval_expression(right.as_ref().clone(), env)?;
+                eval_infix_expression(operator, left, right)
+            }
+        },
         ast::Expression::If {
             condition,
             consequence,
@@ -605,7 +620,10 @@ mod test {
 
     #[test]
     fn test_for() {
-        let tests = vec![("let a = 0; for b in [1,2,3] { let a = a + b }", 3)];
+        let tests = vec![
+            ("let a = 0; for b in [1,2,3] { b }", 3),
+            ("let a = 0; for b in [1,2,644] { b }", 644),
+        ];
 
         for (input, expect) in tests {
             let mut l = Lexer::new(input);

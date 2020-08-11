@@ -24,6 +24,7 @@ pub enum InfixOprator {
     Asterisk,
     Gt,
     Lt,
+    Assign,
     Equal,
     Nequal,
     Lparen, //関数呼び出しはLparenをinfixとして捉える
@@ -38,6 +39,7 @@ impl fmt::Display for InfixOprator {
             Self::Asterisk => write!(f, "*"),
             Self::Gt => write!(f, ">"),
             Self::Lt => write!(f, "<"),
+            Self::Assign => write!(f, "="),
             Self::Equal => write!(f, "=="),
             Self::Nequal => write!(f, "!="),
             Self::Lparen => write!(f, "("),

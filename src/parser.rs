@@ -143,6 +143,7 @@ impl<'a> Parser<'a> {
             Token::SLASH => ast::InfixOprator::Slash,
             Token::GT => ast::InfixOprator::Gt,
             Token::LT => ast::InfixOprator::Lt,
+            Token::ASSIGN => ast::InfixOprator::Assign,
             Token::EQ => ast::InfixOprator::Equal,
             Token::NEQ => ast::InfixOprator::Nequal,
             Token::LPAREN => {
@@ -381,7 +382,14 @@ impl<'a> Parser<'a> {
 
     fn parse_prefix(&mut self) -> Result<ast::Expression, Error> {
         match self.current_token.clone() {
-            Token::IDENT(ident) => Ok(ast::Expression::Identifier(ident)),
+            Token::IDENT(ident) => {
+                if self.peek_token_is(Token::ASSIGN) {
+                    self.next_token();
+                    self.parse_infix(ast::Expression::Identifier(ident))
+                } else {
+                    Ok(ast::Expression::Identifier(ident))
+                }
+            }
             Token::INT(i) => Ok(ast::Expression::Integer(i)),
             Token::STRING(s) => Ok(ast::Expression::String(s)),
             Token::TRUE => Ok(ast::Expression::Bool(true)),
@@ -407,7 +415,7 @@ impl<'a> Parser<'a> {
             }
             Token::FOR => self.parse_for_expression(),
             t => Err(ParseError {
-                msg: format!("Unexpected Expression: {}", t),
+                msg: format!("Unexpected Prefix Expression: {}", t),
             }),
         }
     }
@@ -891,6 +899,27 @@ mod test {
                 e => panic!(format!("Invalid For Expression {:?}", e)),
             },
             e => panic!(format!("expect `Expression` but got {:?}", e),),
+        };
+    }
+
+    #[test]
+    fn test_parse_assign() {
+        let input = r#"let a = 10; a = 11;"#;
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program().unwrap_or_else(|e| panic!("{:?}", e));
+        let stmt = &program.statements[1];
+        match stmt {
+            ast::Statement::Expression(e) => match e {
+                ast::Expression::Infix { .. } => {
+                    assert_eq!(format!("{}", e), "(a = 11)");
+                }
+                e => panic!(format!("Invalid Assign Expression {:?}", e)),
+            },
+            e => panic!(format!(
+                "expect `Expression` but got {:?}, statement => {}",
+                e, stmt
+            ),),
         };
     }
 }
