@@ -40,4 +40,8 @@ impl Environment {
     pub fn set(&mut self, name: String, value: Object) {
         self.store.insert(name, value);
     }
+
+    pub fn remove(&mut self, name: &String) {
+        self.store.remove(name);
+    }
 }

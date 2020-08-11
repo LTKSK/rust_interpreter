@@ -282,11 +282,12 @@ fn eval_expression(
             // arrayの値を一つずつenv上のparameterにマッピング
             if let ast::Expression::Array(array) = *array.clone() {
                 for object in eval_expressions(array, env)? {
-                    let mut env = extend_for_env(&parameter, env, object);
+                    env.set(parameter.clone(), object);
                     if let ast::Statement::Block(stmts) = *statement.clone() {
-                        result = eval_block_statements(stmts, &mut env)?;
+                        result = eval_block_statements(stmts, env)?;
                     }
                 }
+                env.remove(&parameter.clone());
             }
             Ok(result)
         } //_ => Err(EvalError { msg: "not implemented yet".to_string(), }),
