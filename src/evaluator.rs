@@ -29,8 +29,8 @@ fn eval_prefix_minus_operator(right: Object) -> Result<Object, Error> {
 
 fn eval_prefix_expression(op: ast::PrefixOprator, right: Object) -> Result<Object, Error> {
     match op {
-        ast::PrefixOprator::Bang => Ok(eval_prefix_bang_operator(right)?),
-        ast::PrefixOprator::Minus => Ok(eval_prefix_minus_operator(right)?),
+        ast::PrefixOprator::Bang => eval_prefix_bang_operator(right),
+        ast::PrefixOprator::Minus => eval_prefix_minus_operator(right),
     }
 }
 
@@ -109,16 +109,6 @@ fn extend_function_env(
             env.set(i.to_string(), arg)
         }
     }
-    env
-}
-
-fn extend_for_env(
-    parameter: &str,
-    env: &environment::Environment,
-    arg: Object,
-) -> environment::Environment {
-    let mut env = environment::Environment::new_enclosed(env);
-    env.set(String::from(parameter), arg);
     env
 }
 

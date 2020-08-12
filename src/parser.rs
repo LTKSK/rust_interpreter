@@ -147,10 +147,10 @@ impl<'a> Parser<'a> {
             Token::EQ => ast::InfixOprator::Equal,
             Token::NEQ => ast::InfixOprator::Nequal,
             Token::LPAREN => {
-                return Ok(self.parse_call_expression(left))?;
+                return self.parse_call_expression(left);
             }
             Token::LBRACKET => {
-                return Ok(self.parse_index_expression(left))?;
+                return self.parse_index_expression(left);
             }
             _ => return Ok(left),
         };
