@@ -3,3 +3,8 @@
 作成に際して、以下の記事も参考しています
 * [「Go言語でつくるインタプリタ」をRustで実装しました。](https://buildersbox.corp-sansan.com/entry/2020/06/29/110000)
 * [[Rust] 『Go言語でつくるインタプリタ』Rustで読了](https://qiita.com/osanshouo/items/d1b18c90e06670d602fa)
+
+# 実行方法
+
+`docker image build -t interpreter .`  
+`docker run -it --rm interpreter`
