@@ -29,3 +29,5 @@
   - `add(1,2) #=> 3`
 - for文
   - `let sum = 0; for val in [1,2,3] { sum = sum + val }; sum #=> 6`
+- exit
+  - `exit`
