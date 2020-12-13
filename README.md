@@ -8,3 +8,24 @@
 
 `docker image build -t interpreter .`  
 `docker run -it --rm interpreter`
+
+# 対応している文法
+
+- 変数定義
+  - `let a = 10`
+- 四則演算
+  - `10 + 3 + 2 * (1 + 2) #=> 19`
+- 文字列の結合
+  - `"aaa" + "bbb" #=> aaabbb`
+- 配列の定義と参照
+  - `let array = [1,2,3]`
+  - `array[0] #=> 1`
+- 連想配列の定義と参照
+  - `let dict = {"a": 1, "b": "value"}`
+  - `dict["a"] #=> 1`
+  - `dict["b"] #=> value`
+- 関数の定義と呼び出し
+  - `let add = fn(a,b) { a + b }`
+  - `add(1,2) #=> 3`
+- for文
+  - `let sum = 0; for val in [1,2,3] { sum = sum + val }; sum #=> 6`
