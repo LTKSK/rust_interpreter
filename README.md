@@ -29,5 +29,7 @@
   - `add(1,2) #=> 3`
 - for文
   - `let sum = 0; for val in [1,2,3] { sum = sum + val }; sum #=> 6`
+- if文
+  - `let a = 10; if (a == 10) { "hoge" } else { "huga" } # => "hoge"`
 - exit
   - `exit`
